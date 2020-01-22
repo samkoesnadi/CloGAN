@@ -1,0 +1,1 @@
+00000032_012.png	Atelectasis|Consolidation|Edema|Pneumonia	12	32	55	F	AP	2500	2048	0.168	0.168

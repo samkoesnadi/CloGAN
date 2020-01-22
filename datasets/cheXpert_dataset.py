@@ -76,7 +76,7 @@ def tf_serialize_example(f0,f1,f2):
 def convert_to_half_plus_one(variable, half_one_val, plus_one_val):
 	return .5 if variable == half_one_val else 1 if variable == plus_one_val else 0
 
-def read_CheXpert_csv(csv_path):
+def read_CheXpert_csv(csv_path, statistics=True):
 	"""
 
 	:param csv_path:
@@ -116,6 +116,9 @@ def read_CheXpert_csv(csv_path):
 				label = map(lambda l: 0 if l == '' else float(l), label)
 				label = map(lambda l: 1 if l == -1 else l, label)  # U-Ones
 				labels[i_row-1] = list(label)
+
+	if statistics : statisticsCheXpert(labels)
+
 	return (path_key, patient_data_key, labels_key), (paths, patient_datas, labels), total_row
 
 def statisticsCheXpert(labels, labels_key=['No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other', 'Fracture', 'Support Devices']):
@@ -196,11 +199,11 @@ if __name__ == "__main__":
 	# write_csv_to_tfrecord(valids, valid_target_tfrecord_path)
 	# write_csv_to_tfrecord(trains, train_target_tfrecord_path)
 	#
-	# # get test set
-	# (_, _, labels_key), tests, total_row = read_CheXpert_csv(valid_csv_file)
+	# get test set
+	(_, _, labels_key), tests, total_row = read_CheXpert_csv(valid_csv_file)
 	# write_csv_to_tfrecord(tests, test_target_tfrecord_path)
 
-	# reading
-	train_dataset = read_dataset(test_target_tfrecord_path, dataset_path)
-	for image_features in train_dataset.take(1):
-		print(image_features)
+	# # reading
+	# train_dataset = read_dataset(test_target_tfrecord_path, dataset_path)
+	# for image_features in train_dataset.take(1):
+	# 	print(image_features)

@@ -8,6 +8,7 @@ pillow
 tqdm
 tensorflow-gpu
 git+https://github.com/salaniz/pycocoevalcap
+scikit-learn
 scikit-image
 tensorflow_probability
 pandas
