@@ -15,11 +15,11 @@ if __name__ == "__main__":
 	_metrics = {"predictions" : [f1, tf.keras.metrics.AUC()]}  # give recall for metric it is more accurate
 
 	# all callbacks
-	reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_auc', factor=REDUCELR_FACTOR,
-	                                                 verbose=1,
-	                                                 patience=REDUCELR_PATIENCE,
-	                                                 min_lr=REDUCELR_MINLR,
-	                                                 mode="max")
+	# reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_auc', factor=REDUCELR_FACTOR,
+	#                                                  verbose=1,
+	#                                                  patience=REDUCELR_PATIENCE,
+	#                                                  min_lr=REDUCELR_MINLR,
+	#                                                  mode="max")
 	model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
 	                                               monitor="val_auc",
 	                                               verbose=1,
@@ -33,6 +33,7 @@ if __name__ == "__main__":
 													  restore_best_weights=True)
 	tensorboard_cbk = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOGDIR,
 	                                                 histogram_freq=1,
+	                                                 write_grads=True,
 													 write_graph=False,
 	                                                 write_images=False)
 
@@ -76,10 +77,11 @@ if __name__ == "__main__":
 		# Log the gradcampp as an image summary.
 		with file_writer_cm.as_default():
 			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES, step=epoch, description="GradCAM++ per classes")
+
 	# Define the per-epoch callback.
 	cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
 
-	_callbacks = [reduce_lr, model_ckp, early_stopping, tensorboard_cbk, cm_callback]  # callbacks list
+	_callbacks = [model_ckp, early_stopping, tensorboard_cbk, cm_callback]  # callbacks list
 
 	class_weight = None
 	if USE_CLASS_WEIGHT:
@@ -95,13 +97,25 @@ if __name__ == "__main__":
 	          epochs=MAX_EPOCHS,
 	          validation_data=val_dataset,
 	          class_weight=class_weight,
-	          validation_steps=ceil(CHEXPERT_VAL_N / BATCH_SIZE),
+	          # validation_steps=ceil(CHEXPERT_VAL_N / BATCH_SIZE),
 	          initial_epoch=init_epoch,
-	          steps_per_epoch=ceil(SUB_CHEXPERT_TRAIN_N / BATCH_SIZE),
-	          use_multiprocessing=True,
-	          callbacks=_callbacks)
+	          # steps_per_epoch=ceil(SUB_CHEXPERT_TRAIN_N / BATCH_SIZE),
+	          callbacks=_callbacks,
+	          verbose=1)
+
+	# # start training
+	# model.fit(train_dataset,
+	#           epochs=MAX_EPOCHS,
+	#           validation_data=val_dataset,
+	#           class_weight=class_weight,
+	#           validation_steps=ceil(CHEXPERT_VAL_N / BATCH_SIZE),
+	#           initial_epoch=init_epoch,
+	#           steps_per_epoch=ceil(SUB_CHEXPERT_TRAIN_N / BATCH_SIZE),
+	#           use_multiprocessing=True,
+	#           callbacks=_callbacks)
 
 	# Evaluate the model on the test data using `evaluate`
 	results = model.evaluate(test_dataset,
-	                         steps=ceil(CHEXPERT_TEST_N / BATCH_SIZE))
+	                         # steps=ceil(CHEXPERT_TEST_N / BATCH_SIZE)
+	                         )
 	print('test loss, test f1, test auc:', results)

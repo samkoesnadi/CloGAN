@@ -19,14 +19,14 @@ BUFFER_SIZE = 1600
 BATCH_SIZE = 16
 TOTAL_EPOCHS = 10
 SUB_EPOCHS = 2  # subepoch. So the total applied epochs will be MAX_EPOCHS*SUB_EPOCHS
-LEARNING_RATE = 1e-2
+LEARNING_RATE = 1e-4
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 # callbacks hyperparameter
-REDUCELR_FACTOR = .2
-REDUCELR_PATIENCE = 2
-REDUCELR_MINLR = 1e-5
+# REDUCELR_FACTOR = .2
+# REDUCELR_PATIENCE = 2
+# REDUCELR_MINLR = 1e-5
 
 MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
 MODELCKP_BEST_ONLY = True
