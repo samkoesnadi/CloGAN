@@ -8,5 +8,4 @@ tqdm
 tensorflow-gpu
 scikit-learn
 scikit-image
-tensorflow_probability
 pandas

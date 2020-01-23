@@ -2,7 +2,8 @@ import os
 import glob
 import re
 from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE
-import skimage
+import skimage.io
+import skimage.transform
 
 def f1(y_true, y_pred): #taken from old keras source code
 	# threshold y_pred

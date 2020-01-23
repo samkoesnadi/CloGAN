@@ -2,3 +2,5 @@ logs
 .idea
 *.txt
 *.out
+checkpoints
+report/results
