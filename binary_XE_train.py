@@ -103,17 +103,6 @@ if __name__ == "__main__":
 	          callbacks=_callbacks,
 	          verbose=1)
 
-	# # start training
-	# model.fit(train_dataset,
-	#           epochs=MAX_EPOCHS,
-	#           validation_data=val_dataset,
-	#           class_weight=class_weight,
-	#           validation_steps=ceil(CHEXPERT_VAL_N / BATCH_SIZE),
-	#           initial_epoch=init_epoch,
-	#           steps_per_epoch=ceil(SUB_CHEXPERT_TRAIN_N / BATCH_SIZE),
-	#           use_multiprocessing=True,
-	#           callbacks=_callbacks)
-
 	# Evaluate the model on the test data using `evaluate`
 	results = model.evaluate(test_dataset,
 	                         # steps=ceil(CHEXPERT_TEST_N / BATCH_SIZE)
