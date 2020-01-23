@@ -21,30 +21,30 @@ TOTAL_EPOCHS = 10
 SUB_EPOCHS = 2  # subepoch. So the total applied epochs will be MAX_EPOCHS*SUB_EPOCHS
 LEARNING_RATE = 1e-2
 
-TENSORBOARD_LOGDIR = "../logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 # callbacks hyperparameter
 REDUCELR_FACTOR = .2
 REDUCELR_PATIENCE = 2
 REDUCELR_MINLR = 1e-5
 
-MODELCKP_PATH = "../checkpoints/model_weights.{epoch:02d}-{val_f1:.2f}.hdf5"  # do not change the format of basename
+MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
 MODELCKP_BEST_ONLY = True
 
 
 # for validation
 THRESHOLD_SIGMOID = 0.5
-SAMPLE_FILENAME = "../sample/00002032_012.png"
+SAMPLE_FILENAME = "./sample/00002032_012.png"
 
 # for evaluation
-ROC_RESULTS_PATH = "../report/results/ROC_%s.png"
-AUC_RESULTS_PATH = "../report/results/AUC.txt"
+ROC_RESULTS_PATH = "./report/results/ROC_%s.png"
+AUC_RESULTS_PATH = "./report/results/AUC.txt"
 
 # cheXpert dataset
-CHEXPERT_TRAIN_TARGET_TFRECORD_PATH = '../cheXpert_datasets/CheXpert_train.tfrecord'
-CHEXPERT_VALID_TARGET_TFRECORD_PATH = '../cheXpert_datasets/CheXpert_valid.tfrecord'
-CHEXPERT_TEST_TARGET_TFRECORD_PATH = '../cheXpert_datasets/CheXpert_test.tfrecord'
-CHEXPERT_DATASET_PATH = "../../datasets"
+CHEXPERT_TRAIN_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_train.tfrecord'
+CHEXPERT_VALID_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_valid.tfrecord'
+CHEXPERT_TEST_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_test.tfrecord'
+CHEXPERT_DATASET_PATH = "../datasets"
 
 CHEXPERT_TRAIN_N = 201073
 CHEXPERT_VAL_N = 22341
