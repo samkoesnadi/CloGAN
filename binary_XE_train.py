@@ -20,6 +20,16 @@ if __name__ == "__main__":
 	#                                                  patience=REDUCELR_PATIENCE,
 	#                                                  min_lr=REDUCELR_MINLR,
 	#                                                  mode="max")
+
+	def step_decay(epoch):
+		initial_lrate = LEARNING_RATE
+		drop = REDUCELR_FACTOR
+		epochs_drop = REDUCELR_PATIENCE
+		lrate = initial_lrate * math.pow(drop,
+		                                 math.floor((1 + epoch) / epochs_drop))
+		return lrate
+	lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
+
 	model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
 	                                               monitor="val_auc",
 	                                               verbose=1,
@@ -28,7 +38,7 @@ if __name__ == "__main__":
 	                                               mode="max")
 	early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_auc',
 													  verbose=1,
-													  patience=SUB_EPOCHS * 2,
+													  patience=SUB_EPOCHS * 4,
 													  mode='max',
 													  restore_best_weights=True)
 	tensorboard_cbk = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOGDIR,
@@ -81,7 +91,7 @@ if __name__ == "__main__":
 	# Define the per-epoch callback.
 	cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
 
-	_callbacks = [model_ckp, early_stopping, tensorboard_cbk, cm_callback]  # callbacks list
+	_callbacks = [model_ckp, lrate, early_stopping, tensorboard_cbk, cm_callback]  # callbacks list
 
 	class_weight = None
 	if USE_CLASS_WEIGHT:

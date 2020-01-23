@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
 	# Evaluate the model on the test data using `evaluate`
 	results = model.predict(test_dataset,
-	                         steps=ceil(CHEXPERT_TEST_N / BATCH_SIZE),
+	                         # steps=ceil(CHEXPERT_TEST_N / BATCH_SIZE),
 	                         verbose=1)
 
 	print("F1: ", np.mean(f1(test_labels, results).numpy()))

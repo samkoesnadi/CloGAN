@@ -11,6 +11,7 @@ import math
 from utils.utils import *
 import csv
 from scipy import interp
+from scipy.ndimage.interpolation import zoom
 
 def convert_to_RGB(dz):
     norm = plt.Normalize()
@@ -53,9 +54,9 @@ def grad_cam_plus(input_model, img, layer_name):
 
         # Passing through ReLU
         cam = np.maximum(grad_CAM_map, 0)
-        cam = cam / np.max(cam) # scale 0 to 1.0
-        cam = skimage.transform.resize(cam, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
-        #cam = resize(cam, (224,224))
+        cam = zoom(cam, IMAGE_INPUT_SIZE / cam.shape[0])
+        cam = cam / np.max(cam)  # scale 0 to 1.0
+        # cam = resize(cam, (224,224))
 
         cams[i] = cam
 
