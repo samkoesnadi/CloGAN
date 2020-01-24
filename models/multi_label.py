@@ -8,7 +8,6 @@ def model_binaryXE():
 	image_section_model = tf.keras.applications.xception.Xception(include_top=False, weights=None, pooling="avg", input_tensor=input_layer)
 	image_section_layer = image_section_model.output
 
-	image_section_layer = tf.keras.layers.BatchNormalization()(image_section_layer)
 	image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
 	output_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", name="predictions", kernel_initializer=KERNEL_INITIALIZER)(image_section_layer)
 

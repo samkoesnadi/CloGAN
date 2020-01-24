@@ -131,7 +131,10 @@ if __name__ == "__main__":
 	# Define the per-epoch callback.
 	cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
 
-	_callbacks = [model_ckp, lrate, early_stopping, tensorboard_cbk, cm_callback]  # callbacks list
+	_callbacks = [model_ckp, early_stopping, tensorboard_cbk, cm_callback]  # callbacks list
+
+	if USE_REDUCELR:
+		_callbacks.append(lrate)
 
 	# start training
 	model.fit(train_dataset,

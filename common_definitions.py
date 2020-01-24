@@ -9,23 +9,24 @@ colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 # common global variables
 IMAGE_INPUT_SIZE = 320  # this is because of Xception
 NUM_CLASSES = 14
-LOAD_WEIGHT_BOOL = True
-DROPOUT_N = 0.5
+LOAD_WEIGHT_BOOL = False
+DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = True
+USE_REDUCELR = False
 
 # for training
 BUFFER_SIZE = 1600
 BATCH_SIZE = 16
 TOTAL_EPOCHS = 20
 SUB_EPOCHS = 1  # subepoch. So the total applied epochs will be MAX_EPOCHS*SUB_EPOCHS
-LEARNING_RATE = 1e-2
+LEARNING_RATE = 1e-3
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 # callbacks hyperparameter
 REDUCELR_FACTOR = .5
-REDUCELR_PATIENCE = 2
+REDUCELR_PATIENCE = 3
 REDUCELR_MINLR = 1e-3
 
 MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename

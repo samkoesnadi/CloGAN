@@ -30,7 +30,7 @@ def get_and_mkdir(path):
 def get_max_acc_weight(path):
 	dir_modelckp = get_and_mkdir(path)
 
-	model_weight_files = glob.glob(dir_modelckp + "/*.hdf5")
+	model_weight_files = sorted(glob.glob(dir_modelckp + "/*.hdf5"), reverse=True)
 
 	if len(model_weight_files) == 0:
 		return False, 0
@@ -76,7 +76,7 @@ def calculating_class_weights(y_true):
 
 def get_weighted_loss(weights):
 	def weighted_loss(y_true, y_pred):
-		return tf.math.reduce_mean((weights[:,0]**(1-y_true))*(weights[:,1]**(y_true))*tf.keras.losses.binary_crossentropy(y_true, y_pred), axis=-1)
+		return tf.keras.backend.mean((weights[:,0]**(1-y_true))*(weights[:,1]**(y_true))*tf.keras.backend.binary_crossentropy(y_true, y_pred), axis=-1)
 	return weighted_loss
 
 if __name__ == "__main__":
