@@ -27,8 +27,7 @@ USE_SPARSITY_NORM = True
 # for training
 BUFFER_SIZE = 1600
 BATCH_SIZE = 16
-TOTAL_EPOCHS = 20
-SUB_EPOCHS = 1  # subepoch. So the total applied epochs will be MAX_EPOCHS*SUB_EPOCHS
+MAX_EPOCHS = 20
 LEARNING_RATE = 1e-3
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -96,9 +95,6 @@ neg[13] = 95729
 
 
 # calculation
-MAX_EPOCHS = TOTAL_EPOCHS * SUB_EPOCHS
-SUB_CHEXPERT_TRAIN_N = ceil(CHEXPERT_TRAIN_N / SUB_EPOCHS)
-
 CHEXPERT_CLASS_WEIGHT = \
 	np.array([[ 0.55570203,  4.98816671],
 	[ 0.55786667,  4.82027617],

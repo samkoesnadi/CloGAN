@@ -56,7 +56,7 @@ if __name__ == "__main__":
 	                                               mode="max")
 	early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_auc',
 													  verbose=1,
-													  patience=SUB_EPOCHS * 4,
+													  patience=4,
 													  mode='max',
 													  restore_best_weights=True)
 
@@ -117,7 +117,6 @@ if __name__ == "__main__":
 	          validation_data=val_dataset,
 	          validation_steps=ceil(CHEXPERT_VAL_N / BATCH_SIZE),
 	          initial_epoch=init_epoch,
-	          steps_per_epoch=ceil(SUB_CHEXPERT_TRAIN_N / BATCH_SIZE),
 	          callbacks=_callbacks,
 	          verbose=1)
 
