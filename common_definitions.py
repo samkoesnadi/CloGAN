@@ -6,10 +6,18 @@ from math import ceil
 import datetime
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
+import keras
+from keras.backend import manual_variable_initialization
+manual_variable_initialization(True)
+keras.backend.clear_session()
+tf.random.set_seed(0)
+np.random.seed(0)
+import keras.losses
+
 # common global variables
 IMAGE_INPUT_SIZE = 320  # this is because of Xception
 NUM_CLASSES = 14
-LOAD_WEIGHT_BOOL = False
+LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = True
@@ -33,6 +41,7 @@ REDUCELR_MINLR = 1e-3
 MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
 MODELCKP_BEST_ONLY = True
 
+SAVED_MODEL_PATH = './weights/model.h5'
 
 # for validation
 THRESHOLD_SIGMOID = 0.5

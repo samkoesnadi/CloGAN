@@ -8,14 +8,10 @@ from utils.visualization import *
 from models.multi_label import *
 
 if __name__ == "__main__":
-	model = model_binaryXE()
-
 	if LOAD_WEIGHT_BOOL:
-		target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
-		if target_model_weight:  # if weight is Found
-			model.load_weights(target_model_weight)
-		else:
-			print("[Load weight] No weight is found")
+		model = tf.keras.models.load_model(SAVED_MODEL_PATH, custom_objects={'weighted_loss': get_weighted_loss(CHEXPERT_CLASS_WEIGHT), 'f1': f1})
+	else:
+		model = model_binaryXE()
 
 
 	# get the dataset
@@ -38,3 +34,8 @@ if __name__ == "__main__":
 	print("F1: ", np.mean(f1(test_labels, results).numpy()))
 
 	plot_roc(test_labels, results)
+
+	results = model.evaluate(test_dataset,
+	                         # steps=ceil(CHEXPERT_TEST_N / BATCH_SIZE)
+	                         )
+	print('test loss, test f1, test auc:', results)
