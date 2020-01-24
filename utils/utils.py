@@ -1,7 +1,7 @@
 import os
 import glob
 import re
-from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE
+from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, pos, neg
 import skimage.io
 import skimage.transform
 
@@ -60,6 +60,13 @@ def read_image_and_preprocess(filename):
 	img = skimage.transform.resize(img, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
 
 	return img
+
+def get_class_weight():
+	class_weight = dict()
+	for p in pos:
+		weight_for_1 = (1 / pos[p]) * (pos[p]+neg[p])  # num classes as the total is calculated from all the positives
+		class_weight[p] = weight_for_1
+	return class_weight
 
 if __name__ == "__main__":
 	img = read_image_and_preprocess("../sample/00002032_012.png")

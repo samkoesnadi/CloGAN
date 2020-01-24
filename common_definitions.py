@@ -11,7 +11,7 @@ IMAGE_INPUT_SIZE = 320  # this is because of Xception
 NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.5
-KERNEL_INITIALIZER = tf.keras.initializers.glorot_uniform()
+KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = True
 
 # for training
@@ -26,6 +26,7 @@ TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m
 # callbacks hyperparameter
 REDUCELR_FACTOR = .5
 REDUCELR_PATIENCE = 2
+REDUCELR_MINLR = 1e-3
 
 MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
 MODELCKP_BEST_ONLY = True
