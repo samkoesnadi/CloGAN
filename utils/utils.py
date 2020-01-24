@@ -1,9 +1,12 @@
 import os
 import glob
 import re
+import numpy as np
 from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, pos, neg
 import skimage.io
 import skimage.transform
+from sklearn.utils.class_weight import compute_class_weight
+from tqdm import tqdm
 
 def f1(y_true, y_pred): #taken from old keras source code
 	# threshold y_pred
@@ -61,12 +64,20 @@ def read_image_and_preprocess(filename):
 
 	return img
 
-def get_class_weight():
-	class_weight = dict()
-	for p in pos:
-		weight_for_1 = (1 / pos[p]) * (pos[p]+neg[p])  # num classes as the total is calculated from all the positives
-		class_weight[p] = weight_for_1
-	return class_weight
+def calculating_class_weights(y_true):
+	number_dim = np.shape(y_true)[1]
+	weights = np.empty([number_dim, 2])
+	for i in tqdm(range(number_dim)):
+		try:
+			weights[i] = compute_class_weight('balanced', [0., 1.], y_true[:, i])
+		except ValueError:
+			weights[i] = np.ones(2)
+	return weights
+
+def get_weighted_loss(weights):
+	def weighted_loss(y_true, y_pred):
+		return tf.math.reduce_mean((weights[:,0]**(1-y_true))*(weights[:,1]**(y_true))*tf.keras.losses.binary_crossentropy(y_true, y_pred), axis=-1)
+	return weighted_loss
 
 if __name__ == "__main__":
 	img = read_image_and_preprocess("../sample/00002032_012.png")

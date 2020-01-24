@@ -10,8 +10,24 @@ from models.multi_label import *
 if __name__ == "__main__":
 	model = model_binaryXE()
 
+	# get the dataset
+	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	val_dataset = read_dataset(CHEXPERT_VALID_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	test_dataset = read_dataset(CHEXPERT_TEST_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+
+	if USE_CLASS_WEIGHT:
+		# train_labels = []
+		# # get the ground truth labels
+		# for _, train_label in tqdm(train_dataset):
+		# 	train_labels.extend(train_label)
+		# train_labels = np.array(train_labels)
+		# print(calculating_class_weights(train_labels))
+
+		_loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
+	else:
+		_loss = tf.keras.losses.BinaryCrossentropy()
+
 	_optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-	_loss = tf.keras.losses.BinaryCrossentropy()
 	_metrics = {"predictions" : [f1, tf.keras.metrics.AUC()]}  # give recall for metric it is more accurate
 
 	# all callbacks
@@ -82,11 +98,6 @@ if __name__ == "__main__":
                   loss=_loss,
                   metrics=_metrics)
 
-	# get the dataset
-	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
-	val_dataset = read_dataset(CHEXPERT_VALID_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
-	test_dataset = read_dataset(CHEXPERT_TEST_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
-
 	file_writer_cm = tf.summary.create_file_writer(TENSORBOARD_LOGDIR + '/cm')
 	# define image logging
 	def log_gradcampp(epoch, logs):
@@ -122,16 +133,10 @@ if __name__ == "__main__":
 
 	_callbacks = [model_ckp, lrate, early_stopping, tensorboard_cbk, cm_callback]  # callbacks list
 
-	if USE_CLASS_WEIGHT:
-		class_weight = get_class_weight()
-	else:
-		class_weight = None
-
 	# start training
 	model.fit(train_dataset,
 	          epochs=MAX_EPOCHS,
 	          validation_data=val_dataset,
-	          class_weight=class_weight,
 	          # validation_steps=ceil(CHEXPERT_VAL_N / BATCH_SIZE),
 	          initial_epoch=init_epoch,
 	          # steps_per_epoch=ceil(SUB_CHEXPERT_TRAIN_N / BATCH_SIZE),
