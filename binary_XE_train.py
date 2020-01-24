@@ -60,33 +60,6 @@ if __name__ == "__main__":
 													  mode='max',
 													  restore_best_weights=True)
 
-
-	class TensorBoardWrapper(tf.keras.callbacks.TensorBoard):
-		'''Sets the self.validation_data property for use with TensorBoard callback.'''
-
-		def __init__(self, batch_gen, nb_steps, b_size, **kwargs):
-			super(TensorBoardWrapper, self).__init__(**kwargs)
-			self.batch_gen = batch_gen  # The generator.
-			self.nb_steps = nb_steps  # Number of times to call next() on the generator.
-			self.batch_size = b_size
-
-		def on_train_begin(self, logs):
-			# Fill in the `validation_data` property. Obviously this is specific to how your generator works.
-			# Below is an example that yields images and classification tags.
-			# After it's filled in, the regular on_epoch_end method has access to the validation_data.
-			imgs, tags = None, None
-			for s, (ib, tb) in enumerate(self.batch_gen):
-				if imgs is None and tags is None:
-					imgs = np.zeros(((self.nb_steps * self.batch_size,) + ib.shape[1:]), dtype=np.float32)
-					tags = np.zeros(((self.nb_steps * self.batch_size,) + tb.shape[1:]), dtype=np.float32)
-				imgs[s * ib.shape[0]:(s + 1) * ib.shape[0]] = ib
-				tags[s * tb.shape[0]:(s + 1) * tb.shape[0]] = tb
-
-			self.validation_data = [imgs, tags, np.ones(imgs.shape[0]), 0.0]
-
-			return super(TensorBoardWrapper, self).on_train_begin(logs)
-
-
 	init_epoch = 0
 	if LOAD_WEIGHT_BOOL:
 		target_model_weight, init_epoch = get_max_acc_weight(MODELCKP_PATH)
@@ -124,12 +97,11 @@ if __name__ == "__main__":
 			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES, step=epoch, description="GradCAM++ per classes")
 
 
-	tensorboard_cbk = TensorBoardWrapper(val_dataset, ceil(CHEXPERT_VAL_N / BATCH_SIZE), BATCH_SIZE,
-	                                     log_dir=TENSORBOARD_LOGDIR,
-	                                     histogram_freq=1,
-	                                     write_grads=True,
-	                                     write_graph=False,
-	                                     write_images=False)
+	tensorboard_cbk = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOGDIR,
+				                                     histogram_freq=1,
+				                                     write_grads=True,
+				                                     write_graph=False,
+				                                     write_images=False)
 
 	# Define the per-epoch callback.
 	cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
