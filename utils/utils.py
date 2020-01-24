@@ -2,9 +2,7 @@ import os
 import glob
 import re
 import numpy as np
-from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, pos, neg
-import skimage.io
-import skimage.transform
+from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
 
@@ -58,12 +56,6 @@ def get_max_acc_weight(path):
 
 	return target_weight_file, max_epoch
 
-def read_image_and_preprocess(filename):
-	img = skimage.io.imread(filename, True)
-	img = skimage.transform.resize(img, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
-
-	return img
-
 def calculating_class_weights(y_true):
 	number_dim = np.shape(y_true)[1]
 	weights = np.empty([number_dim, 2])
@@ -79,5 +71,7 @@ def get_weighted_loss(weights):
 		return tf.keras.backend.mean((weights[:,0]**(1-y_true))*(weights[:,1]**(y_true))*tf.keras.backend.binary_crossentropy(y_true, y_pred), axis=-1)
 	return weighted_loss
 
+
 if __name__ == "__main__":
-	img = read_image_and_preprocess("../sample/00002032_012.png")
+	# img = read_image_and_preprocess("../sample/00002032_012.png")
+	a = np.random.randint(0, 2, size=10)

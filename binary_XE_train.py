@@ -2,10 +2,12 @@
 Train normal model with binary XE as loss function
 """
 from common_definitions import *
-from datasets.cheXpert_dataset import read_dataset
+from datasets.cheXpert_dataset import read_dataset, read_image_and_preprocess
 from utils.utils import *
 from utils.visualization import *
 from models.multi_label import *
+import skimage.color
+
 
 if __name__ == "__main__":
 	model = model_binaryXE()
@@ -101,7 +103,9 @@ if __name__ == "__main__":
 	file_writer_cm = tf.summary.create_file_writer(TENSORBOARD_LOGDIR + '/cm')
 	# define image logging
 	def log_gradcampp(epoch, logs):
-		_image = read_image_and_preprocess(SAMPLE_FILENAME)
+		_image = read_image_and_preprocess(SAMPLE_FILENAME, use_sn=True)
+		image_ori = skimage.color.gray2rgb(read_image_and_preprocess(SAMPLE_FILENAME, use_sn=False))
+
 		image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
 		gradcampps = Xception_gradcampp(model, image)
@@ -110,10 +114,9 @@ if __name__ == "__main__":
 
 		for i_g, gradcampp in enumerate(gradcampps):
 
-			image = skimage.color.gray2rgb(_image)
 			gradcampp = convert_to_RGB(gradcampp)
 
-			result = .5 * image + .5 * gradcampp
+			result = .5 * image_ori + .5 * gradcampp
 			results[i_g] = result
 
 		# Log the gradcampp as an image summary.

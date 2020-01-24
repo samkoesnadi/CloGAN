@@ -11,6 +11,9 @@ import csv
 import os
 import pandas as pd
 np.random.seed(666)
+from tqdm import tqdm
+import skimage.io
+import skimage.transform
 
 # all the variables
 dataset_path = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/datasets"
@@ -40,12 +43,40 @@ def _int64_feature(value):
   """Returns an int64_list from a bool / enum / int / uint."""
   return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
+def sparsity_norm(a):
+	mask = tf.where(a > 0., 1., 0.)
+	norm_m = tf.reduce_sum(mask)
+	return K_SN * a / norm_m
+
+def calculate_K_SN(train_dataset):
+	sum_norm = 0.
+	n_mask = 0.
+	for img, _ in tqdm(train_dataset):
+		mask = tf.where(img > 0., 1., 0.)
+		norm_m = tf.reduce_sum(mask)
+
+		sum_norm += norm_m
+		n_mask += 1.
+	return sum_norm / (n_mask * BATCH_SIZE)
+
 def load_image(img_path):
 	# load image
 	img = tf.io.read_file(img_path)
 	img = tf.image.decode_jpeg(img, channels=1)  # output grayscale image
 	img = tf.image.resize(img, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
 	img /= 255.
+
+	# sparsity normalization
+	img = sparsity_norm(img) if USE_SPARSITY_NORM else img
+
+	return img
+
+def read_image_and_preprocess(filename, use_sn=False):
+	img = skimage.io.imread(filename, True)
+	img = skimage.transform.resize(img, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
+
+	# sparsity normalization
+	img = sparsity_norm(img) if use_sn else img
 
 	return img
 
@@ -199,10 +230,14 @@ if __name__ == "__main__":
 	# write_csv_to_tfrecord(trains, train_target_tfrecord_path)
 	#
 	# get test set
-	(_, _, labels_key), tests, total_row = read_CheXpert_csv(valid_csv_file)
+	# (_, _, labels_key), tests, total_row = read_CheXpert_csv(valid_csv_file)
 	# write_csv_to_tfrecord(tests, test_target_tfrecord_path)
 
 	# # reading
 	# train_dataset = read_dataset(test_target_tfrecord_path, dataset_path)
 	# for image_features in train_dataset.take(1):
 	# 	print(image_features)
+
+	# calculate K_SN
+	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	print(calculate_K_SN(train_dataset))
