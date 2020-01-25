@@ -26,7 +26,7 @@ if __name__ == "__main__":
 	_metrics = {"predictions" : [f1, tf.keras.metrics.AUC()]}  # give recall for metric it is more accurate
 
 	clr = CyclicLR(base_lr=LEARNING_RATE, max_lr=CLR_MAXLR,
-	               step_size=CHEXPERT_TRAIN_N, mode='triangular')
+	               step_size=2*ceil(CHEXPERT_TRAIN_N / BATCH_SIZE), mode='triangular')
 
 	model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
 	                                               monitor="val_auc",
