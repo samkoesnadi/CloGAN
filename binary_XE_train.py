@@ -32,24 +32,8 @@ if __name__ == "__main__":
 	_optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
 	_metrics = {"predictions" : [f1, tf.keras.metrics.AUC()]}  # give recall for metric it is more accurate
 
-	# all callbacks
-	# reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_auc', factor=REDUCELR_FACTOR,
-	#                                                  verbose=1,
-	#                                                  patience=REDUCELR_PATIENCE,
-	#                                                  min_lr=REDUCELR_MINLR,
-	#                                                  mode="max")
-
 	clr = CyclicLR(base_lr=LEARNING_RATE, max_lr=CLR_MAXLR,
-	               step_size=2*CHEXPERT_TRAIN_N, mode='triangular')
-
-	def step_decay(epoch):
-		initial_lrate = LEARNING_RATE
-		drop = REDUCELR_FACTOR
-		epochs_drop = REDUCELR_PATIENCE
-		lrate = initial_lrate * math.pow(drop,
-		                                 math.floor((1 + epoch) / epochs_drop))
-		return max(lrate, REDUCELR_MINLR)
-	lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
+	               step_size=CHEXPERT_TRAIN_N, mode='triangular')
 
 	model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
 	                                               monitor="val_auc",
@@ -86,6 +70,8 @@ if __name__ == "__main__":
 
 		prediction = model.predict(image)
 
+		lr = logs["lr"] if "lr" in logs else LEARNING_RATE
+
 		gradcampps = Xception_gradcampp(model, image)
 
 		results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
@@ -102,6 +88,7 @@ if __name__ == "__main__":
 			tf.summary.text("Patient 0 prediction:", str(prediction), step=epoch,
 			                description="Prediction from sample file")
 			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES, step=epoch, description="GradCAM++ per classes")
+			tf.summary.scalar("epoch_lr", lr, step=epoch)
 
 
 	tensorboard_cbk = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOGDIR,
@@ -113,10 +100,7 @@ if __name__ == "__main__":
 	# Define the per-epoch callback.
 	cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
 
-	_callbacks = [model_ckp, early_stopping, tensorboard_cbk, cm_callback, clr]  # callbacks list
-
-	if USE_REDUCELR:
-		_callbacks.append(lrate)
+	_callbacks = [clr, model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
 
 	# start training
 	model.fit(train_dataset,

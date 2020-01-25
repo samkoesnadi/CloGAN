@@ -26,14 +26,13 @@ LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = True
-USE_REDUCELR = False
 USE_SPARSITY_NORM = True
 
 # for training
 BUFFER_SIZE = 1600
 BATCH_SIZE = 16
 MAX_EPOCHS = 20
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-4
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -43,7 +42,7 @@ REDUCELR_PATIENCE = 3
 REDUCELR_MINLR = 1e-3
 
 	# clr
-CLR_MAXLR = 6e-3
+CLR_MAXLR = 1e-3
 
 MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
 MODELCKP_BEST_ONLY = True
