@@ -18,13 +18,6 @@ if __name__ == "__main__":
 	test_dataset = read_dataset(CHEXPERT_TEST_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
 
 	if USE_CLASS_WEIGHT:
-		# train_labels = []
-		# # get the ground truth labels
-		# for _, train_label in tqdm(train_dataset):
-		# 	train_labels.extend(train_label)
-		# train_labels = np.array(train_labels)
-		# print(calculating_class_weights(train_labels))
-
 		_loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
 	else:
 		_loss = tf.keras.losses.BinaryCrossentropy()

@@ -67,7 +67,7 @@ def load_image(img_path):
 	img /= 255.
 
 	# sparsity normalization
-	img = sparsity_norm(img) if USE_SPARSITY_NORM else img
+	img = sparsity_norm(img) if USE_SPARSITY_NORM and K_SN != 1. else img
 
 	return img
 
@@ -76,7 +76,7 @@ def read_image_and_preprocess(filename, use_sn=False):
 	img = skimage.transform.resize(img, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
 
 	# sparsity normalization
-	img = sparsity_norm(img) if use_sn else img
+	img = sparsity_norm(img) if use_sn and K_SN != 1. else img
 
 	return img
 
@@ -241,3 +241,11 @@ if __name__ == "__main__":
 	# calculate K_SN
 	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
 	print(calculate_K_SN(train_dataset))
+
+	# calculate class weight
+	# train_labels = []
+	# # get the ground truth labels
+	# for _, train_label in tqdm(train_dataset):
+	# 	train_labels.extend(train_label)
+	# train_labels = np.array(train_labels)
+	# print(calculating_class_weights(train_labels))

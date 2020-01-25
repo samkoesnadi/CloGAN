@@ -20,7 +20,7 @@ import keras.losses
 # mixed_precision.set_policy(policy)
 
 # common global variables
-IMAGE_INPUT_SIZE = 320  # this is because of Xception
+IMAGE_INPUT_SIZE = 224  # this is because of Xception
 NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.25
@@ -118,4 +118,11 @@ CHEXPERT_CLASS_WEIGHT = \
 	[ 0.52251997, 11.60125779],
 	[ 1.05021989 , 0.9543638 ]])
 
-K_SN = 101313.55625  # 320x320 IMAGE SIZE
+# K_SN cannot be 0.
+if IMAGE_INPUT_SIZE == 320:
+	K_SN = 101313.55625  # 320x320 IMAGE SIZE
+elif IMAGE_INPUT_SIZE == 224:
+	K_SN = 49721.094
+else:
+	K_SN = 1.
+	raise Exception("Please re-calculate K_SN")
