@@ -14,6 +14,11 @@ tf.random.set_seed(0)
 np.random.seed(0)
 import keras.losses
 
+# # On TPUs, use 'mixed_bfloat16' instead
+# from tensorflow.keras.mixed_precision import experimental as mixed_precision
+# policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')
+# mixed_precision.set_policy(policy)
+
 # common global variables
 IMAGE_INPUT_SIZE = 320  # this is because of Xception
 NUM_CLASSES = 14
@@ -36,6 +41,9 @@ TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m
 REDUCELR_FACTOR = .5
 REDUCELR_PATIENCE = 3
 REDUCELR_MINLR = 1e-3
+
+	# clr
+CLR_MAXLR = 6e-3
 
 MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
 MODELCKP_BEST_ONLY = True

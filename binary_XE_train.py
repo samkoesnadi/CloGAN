@@ -7,7 +7,7 @@ from utils.utils import *
 from utils.visualization import *
 from models.multi_label import *
 import skimage.color
-
+from utils.cylical_learning_rate import CyclicLR
 
 if __name__ == "__main__":
 	model = model_binaryXE()
@@ -38,6 +38,9 @@ if __name__ == "__main__":
 	#                                                  patience=REDUCELR_PATIENCE,
 	#                                                  min_lr=REDUCELR_MINLR,
 	#                                                  mode="max")
+
+	clr = CyclicLR(base_lr=LEARNING_RATE, max_lr=CLR_MAXLR,
+	               step_size=2*CHEXPERT_TRAIN_N, mode='triangular')
 
 	def step_decay(epoch):
 		initial_lrate = LEARNING_RATE
@@ -81,6 +84,8 @@ if __name__ == "__main__":
 
 		image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
+		prediction = model.predict(image)
+
 		gradcampps = Xception_gradcampp(model, image)
 
 		results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
@@ -94,6 +99,8 @@ if __name__ == "__main__":
 
 		# Log the gradcampp as an image summary.
 		with file_writer_cm.as_default():
+			tf.summary.text("Patient 0 prediction:", str(prediction), step=epoch,
+			                description="Prediction from sample file")
 			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES, step=epoch, description="GradCAM++ per classes")
 
 
@@ -106,7 +113,7 @@ if __name__ == "__main__":
 	# Define the per-epoch callback.
 	cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
 
-	_callbacks = [model_ckp, early_stopping, tensorboard_cbk, cm_callback]  # callbacks list
+	_callbacks = [model_ckp, early_stopping, tensorboard_cbk, cm_callback, clr]  # callbacks list
 
 	if USE_REDUCELR:
 		_callbacks.append(lrate)
@@ -115,7 +122,6 @@ if __name__ == "__main__":
 	model.fit(train_dataset,
 	          epochs=MAX_EPOCHS,
 	          validation_data=val_dataset,
-	          validation_steps=ceil(CHEXPERT_VAL_N / BATCH_SIZE),
 	          initial_epoch=init_epoch,
 	          callbacks=_callbacks,
 	          verbose=1)
