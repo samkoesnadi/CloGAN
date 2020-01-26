@@ -6,13 +6,12 @@ from math import ceil
 import datetime
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-import keras
-from keras.backend import manual_variable_initialization
+import tensorflow.keras
+from tensorflow.keras.backend import manual_variable_initialization
 manual_variable_initialization(True)
-keras.backend.clear_session()
+tf.keras.backend.clear_session()
 tf.random.set_seed(0)
 np.random.seed(0)
-import keras.losses
 
 # # On TPUs, use 'mixed_bfloat16' instead
 # from tensorflow.keras.mixed_precision import experimental as mixed_precision

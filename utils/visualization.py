@@ -111,7 +111,7 @@ def calculate_roc_auc(labels, predictions):
     for i in range(NUM_CLASSES):
         fpr[i], tpr[i], _thresholds = roc_curve(labels[:, i], predictions[:, i])
 
-        tpr[i] = np.where(np.isnan(tpr[i]), 0., tpr[i])  # IMPORTANT! because nan here might better be large number
+        tpr[i] = np.where(np.isnan(tpr[i]), 1., tpr[i])  # IMPORTANT! because nan here might better be large number
 
         _fpr = fpr[i]
         _tpr = tpr[i]
