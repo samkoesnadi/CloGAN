@@ -61,7 +61,9 @@ if __name__ == "__main__":
 
 		image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
-		prediction = model.predict(image)
+		prediction = model.predict(image)[0]
+
+		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
 
 		lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
@@ -78,7 +80,7 @@ if __name__ == "__main__":
 
 		# Log the gradcampp as an image summary.
 		with file_writer_cm.as_default():
-			tf.summary.text("Patient 0 prediction:", str(prediction), step=epoch,
+			tf.summary.text("Patient 0 prediction:", str(prediction_dict), step=epoch,
 			                description="Prediction from sample file")
 			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES, step=epoch, description="GradCAM++ per classes")
 			tf.summary.scalar("epoch_lr", lr, step=epoch)
