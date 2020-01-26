@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
 		image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
-		prediction = model.predict(image)[0]
+		prediction = custom_sigmoid(model.predict(image))[0]
 
 		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
 
