@@ -5,7 +5,7 @@ from common_definitions import *
 from datasets.cheXpert_dataset import *
 from utils.utils import *
 from utils.visualization import *
-from models.multi_label import *
+from models.multi_class import *
 import skimage
 import skimage.color
 
@@ -13,10 +13,13 @@ import skimage.color
 target_filename = "./sample/00002032_012.png"
 
 if __name__ == "__main__":
+	model = model_MC_SVM()
 	if LOAD_WEIGHT_BOOL:
-		model = tf.keras.models.load_model(SAVED_MODEL_PATH, custom_objects={'weighted_loss': get_weighted_loss(CHEXPERT_CLASS_WEIGHT), 'f1': f1})
-	else:
-		model = model_binaryXE()
+		target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
+		if target_model_weight:  # if weight is Found
+			model.load_weights(target_model_weight)
+		else:
+			print("[Load weight] No weight is found")
 
 	# the data
 	_image = read_image_and_preprocess(target_filename, use_sn=True)
@@ -24,7 +27,7 @@ if __name__ == "__main__":
 
 	image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
-	prediction = model.predict(image)
+	prediction = custom_sigmoid(model.predict(image)).numpy()
 
 	gradcampps = Xception_gradcampp(model, image)
 
