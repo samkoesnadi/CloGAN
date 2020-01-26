@@ -22,9 +22,9 @@ np.random.seed(0)
 IMAGE_INPUT_SIZE = 224  # this is because of Xception
 NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
-DROPOUT_N = 0.25
+DROPOUT_N = 0.5
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
-USE_CLASS_WEIGHT = False
+USE_CLASS_WEIGHT = True
 USE_SPARSITY_NORM = True
 
 

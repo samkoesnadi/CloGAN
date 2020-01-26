@@ -8,11 +8,31 @@ from utils.visualization import *
 from models.multi_label import *
 
 if __name__ == "__main__":
-	if LOAD_WEIGHT_BOOL:
-		model = tf.keras.models.load_model(SAVED_MODEL_PATH, custom_objects={'weighted_loss': get_weighted_loss(CHEXPERT_CLASS_WEIGHT), 'f1': f1})
-	else:
-		model = model_binaryXE()
+	# if LOAD_WEIGHT_BOOL:
+	# 	model = tf.keras.models.load_model(SAVED_MODEL_PATH, custom_objects={'weighted_loss': get_weighted_loss(CHEXPERT_CLASS_WEIGHT), 'f1': f1})
+	# else:
+	# 	model = model_binaryXE()
 
+	if USE_CLASS_WEIGHT:
+		_loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
+	else:
+		_loss = tf.keras.losses.BinaryCrossentropy()
+
+	_optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
+	_metrics = {"predictions" : [f1, tf.keras.metrics.AUC()]}  # give recall for metric it is more accurate
+
+	model = model_binaryXE()
+
+	if LOAD_WEIGHT_BOOL:
+		target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
+		if target_model_weight:  # if weight is Found
+			model.load_weights(target_model_weight)
+		else:
+			print("[Load weight] No weight is found")
+
+	model.compile(optimizer=_optimizer,
+	              loss=_loss,
+	              metrics=_metrics)
 
 	# get the dataset
 	# train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
