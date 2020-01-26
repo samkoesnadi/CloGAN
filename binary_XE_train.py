@@ -36,7 +36,7 @@ if __name__ == "__main__":
 	                                               mode="max")
 	early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_auc',
 													  verbose=1,
-													  patience=4,
+													  patience=int(CLR_PATIENCE * 2.5),
 													  mode='max',
 													  restore_best_weights=True)
 

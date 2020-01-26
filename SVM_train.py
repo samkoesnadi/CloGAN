@@ -38,7 +38,7 @@ if __name__ == "__main__":
 	                                               mode="max")
 	early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_auc',
 													  verbose=1,
-													  patience=5,
+													  patience=int(CLR_PATIENCE * 2.5),
 													  mode='max',
 													  restore_best_weights=True)
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
 		image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
-		prediction = custom_sigmoid(model.predict(image))[0]
+		prediction = custom_sigmoid(model.predict(image))[0].numpy()
 
 		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
 
