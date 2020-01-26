@@ -152,7 +152,7 @@ def read_CheXpert_csv(csv_path, statistics=True):
 
 	return (path_key, patient_data_key, labels_key), (paths, patient_datas, labels), total_row
 
-def statisticsCheXpert(labels, labels_key=['No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other', 'Fracture', 'Support Devices']):
+def statisticsCheXpert(labels, labels_key=CHEXPERT_LABELS_KEY):
 	totals = np.zeros((14,2))
 
 	for i in range(14):
@@ -214,7 +214,8 @@ def read_TFRecord(filename):
 
 def read_dataset(filename, dataset_path, image_only=True):
 	dataset = read_TFRecord(filename)
-	dataset = dataset.map(lambda data: (load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"], data["label"]), num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
+	dataset = dataset.map(lambda data: (load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"], data["label"]),
+	                      num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
 	dataset = dataset.map(lambda image, _, label: (image, label), num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
 	dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)  # shuffle and batch with length of padding according to the the batch
 
@@ -240,6 +241,8 @@ if __name__ == "__main__":
 
 	# calculate K_SN
 	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	for i in train_dataset.take(1):
+		print(i)
 	print(calculate_K_SN(train_dataset))
 
 	# calculate class weight

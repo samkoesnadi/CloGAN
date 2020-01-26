@@ -24,8 +24,13 @@ NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
-USE_CLASS_WEIGHT = True
+USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
+
+
+# SVM
+SVM_KERNEL_REGULARIZER = 0.5  # 0.5 is according to the paper
+
 
 # for training
 BUFFER_SIZE = 1600
@@ -67,6 +72,8 @@ CHEXPERT_DATASET_PATH = "../datasets"
 CHEXPERT_TRAIN_N = 201073
 CHEXPERT_VAL_N = 22341
 CHEXPERT_TEST_N = 234
+
+CHEXPERT_LABELS_KEY = ['No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other', 'Fracture', 'Support Devices']
 
 	# statistics training
 pos = dict()

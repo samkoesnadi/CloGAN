@@ -18,6 +18,23 @@ def f1(y_true, y_pred): #taken from old keras source code
 	f1_val = 2*(precision*recall)/(precision+recall+tf.keras.backend.epsilon())
 	return f1_val
 
+def custom_sigmoid(x):
+	"""
+	This functions fit SVM case because it is close to max points on {-1,1}
+	"""
+	return 1 / (1 + tf.math.exp(-2*tf.math.exp(1.)*x))
+
+def f1_svm(y_true, y_pred):
+	y_pred = custom_sigmoid(y_pred)
+	return f1(y_true, y_pred)
+
+class AUC_SVM(tf.keras.metrics.AUC):
+	def __init__(self, **kwargs):
+		super().__init__(**kwargs)
+	def update_state(self, y_true, y_pred, sample_weight=None):
+		y_pred = custom_sigmoid(y_pred)
+		super().update_state(y_true, y_pred, sample_weight)
+
 def get_and_mkdir(path):
 	dir_modelckp = os.path.dirname(path)
 
@@ -69,6 +86,48 @@ def calculating_class_weights(y_true):
 def get_weighted_loss(weights):
 	def weighted_loss(y_true, y_pred):
 		return tf.keras.backend.mean((weights[:,0]**(1-y_true))*(weights[:,1]**(y_true))*tf.keras.backend.binary_crossentropy(y_true, y_pred), axis=-1)
+	return weighted_loss
+
+from tensorflow.python.framework import ops
+from tensorflow.python.ops import math_ops
+from tensorflow.python.framework import smart_cond
+def _maybe_convert_labels(y_true):
+  """Converts binary labels into -1/1."""
+  are_zeros = math_ops.equal(y_true, 0)
+  are_ones = math_ops.equal(y_true, 1)
+  is_binary = math_ops.reduce_all(math_ops.logical_or(are_zeros, are_ones))
+
+  def _convert_binary_labels():
+    # Convert the binary labels to -1 or 1.
+    return 2. * y_true - 1.
+
+  updated_y_true = smart_cond.smart_cond(is_binary,
+                                         _convert_binary_labels, lambda: y_true)
+  return updated_y_true
+
+def squared_hinge(y_true, y_pred, reduction_bool=True):
+	"""Computes the squared hinge loss between `y_true` and `y_pred`.
+	Args:
+	y_true: The ground truth values. `y_true` values are expected to be -1 or 1.
+	  If binary (0 or 1) labels are provided we will convert them to -1 or 1.
+	y_pred: The predicted values.
+	Returns:
+	Tensor with one scalar loss entry per sample.
+	"""
+	y_pred = ops.convert_to_tensor(y_pred)
+	y_true = math_ops.cast(y_true, y_pred.dtype)
+	y_true = _maybe_convert_labels(y_true)
+
+	if reduction_bool:
+		return tf.keras.backend.mean(
+			math_ops.square(math_ops.maximum(1. - y_true * y_pred, 0.)), axis=-1)
+	else:
+		return math_ops.square(math_ops.maximum(1. - y_true * y_pred, 0.))
+
+def get_square_hinge_weighted_loss(weights):
+	# Different Error Costs
+	def weighted_loss(y_true, y_pred):
+		return tf.keras.backend.mean((weights[:,0]**(1-y_true))*(weights[:,1]**y_true)*squared_hinge(y_true, y_pred, reduction_bool=False), axis=-1)
 	return weighted_loss
 
 
