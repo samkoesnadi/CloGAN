@@ -10,7 +10,7 @@ import skimage.color
 from utils.cylical_learning_rate import CyclicLR
 
 if __name__ == "__main__":
-	model = model_MC_SVM()
+	model = model_MC_SVM_layer_norm()
 
 	# get the dataset
 	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 	_metrics = {"predictions" : [f1_svm, AUC_SVM(name="auc")]}  # give recall for metric it is more accurate
 
 	clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
-	               step_size=CLR_PATIENCE*ceil(CHEXPERT_TRAIN_N / BATCH_SIZE), mode='triangular2')
+	               step_size=CLR_PATIENCE*ceil(CHEXPERT_TRAIN_N / BATCH_SIZE), mode='triangular')
 
 	model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
 	                                               monitor="val_auc",
