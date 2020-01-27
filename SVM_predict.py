@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
 	prediction = custom_sigmoid(model.predict(image)).numpy()
 
-	gradcampps = Xception_gradcampp(model, image)
+	gradcampps = Xception_gradcampp(model, image, use_svm=True)
 
 	results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 

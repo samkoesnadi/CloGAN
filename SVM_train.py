@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
 		lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
-		gradcampps = Xception_gradcampp(model, image)
+		gradcampps = Xception_gradcampp(model, image, use_svm=True)
 
 		results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 

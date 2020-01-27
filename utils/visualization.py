@@ -18,12 +18,13 @@ def convert_to_RGB(dz):
     colors = plt.cm.jet(norm(dz))
     return skimage.color.rgba2rgb(colors)
 
-def grad_cam_plus(input_model, img, layer_name):
+def grad_cam_plus(input_model, img, layer_name, use_svm=False):
     cams = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
 
     for i in tqdm(range(NUM_CLASSES), desc="Generate tensorboard's IMAGE"):
         cls = i
         y_c = input_model.output[0, cls]
+        y_c = custom_sigmoid(y_c) if use_svm else y_c
 
         conv_output = input_model.get_layer(layer_name).output
 
@@ -179,8 +180,8 @@ def plot_roc(labels, predictions, **kwargs):
 
 
 
-def Xception_gradcampp(model, img):
-    return grad_cam_plus(model, img, layer_name='block14_sepconv2_act')
+def Xception_gradcampp(model, img, use_svm=False):
+    return grad_cam_plus(model, img, 'block14_sepconv2_act', use_svm)
 
 
 if __name__ == "__main__":
