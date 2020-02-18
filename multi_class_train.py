@@ -2,28 +2,39 @@
 Train normal model with binary XE as loss function
 """
 from common_definitions import *
-from datasets.cheXpert_dataset import read_dataset, read_image_and_preprocess
+from datasets.cheXpert_dataset import read_dataset, read_image_and_preprocess, read_dataset_multi_class
 from utils.utils import *
 from utils.visualization import *
-from models.multi_label import *
+from models.multi_class import *
 import skimage.color
 from utils.cylical_learning_rate import CyclicLR
 
 if __name__ == "__main__":
-	model = model_binaryXE()
+	model = model_MC_softmax()
 
 	# get the dataset
-	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
-	val_dataset = read_dataset(CHEXPERT_VALID_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
-	test_dataset = read_dataset(CHEXPERT_TEST_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	train_dataset = read_dataset_multi_class(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	val_dataset = read_dataset_multi_class(CHEXPERT_VALID_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	test_dataset = read_dataset_multi_class(CHEXPERT_TEST_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
 
-	if USE_CLASS_WEIGHT:
-		_loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
-	else:
-		_loss = tf.keras.losses.BinaryCrossentropy()
+	@tf.function
+	def multi_class_loss(y_true, y_pred):
+		y_true = tf.reshape(y_true, [-1, NUM_CLASSES, 2])
+		y_pred = tf.reshape(y_pred, [-1, NUM_CLASSES, 2])
+
+		y_together = tf.stack([y_true, y_pred], 2)
+		y_together = tf.transpose(y_together, [1,2,0,3])
+
+		sum = tf.constant(0.)
+		for y in y_together:
+			sum += tf.math.reduce_mean(tf.keras.losses.categorical_crossentropy(y[0], y[1]))
+		return sum / NUM_CLASSES
+	_loss = multi_class_loss
 
 	_optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-	_metrics = {"predictions" : [f1, tf.keras.metrics.AUC()]}  # give recall for metric it is more accurate
+
+	f1_mc.__name__ = "f1"
+	_metrics = {"predictions" : [f1_mc, AUC_MC(name="auc")]}  # give recall for metric it is more accurate
 
 	clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
 	               step_size=CLR_PATIENCE*ceil(CHEXPERT_TRAIN_N / BATCH_SIZE), mode='triangular')
@@ -61,13 +72,16 @@ if __name__ == "__main__":
 
 		image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
-		prediction = model.predict(image)[0]
+		prediction = model.predict(image)[0].numpy()
+
+		prediction = prediction.reshape([-1, 2])
+		prediction = np.argmax(prediction, axis=1)  # get the true prediction
 
 		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
 
 		lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
-		gradcampps = Xception_gradcampp(model, image)
+		gradcampps = Xception_gradcampp(model, image, use_svm=True)
 
 		results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 

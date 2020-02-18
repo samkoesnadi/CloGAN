@@ -221,6 +221,25 @@ def read_dataset(filename, dataset_path, image_only=True):
 
 	return dataset
 
+def convert_ones_to_multi_classes(label):
+	return np.array([[0,1] if l else [1,0] for l in label], dtype=np.float32).flatten()
+
+@tf.function(input_signature=(tf.TensorSpec(shape=[NUM_CLASSES], dtype=tf.float32),))
+def mapping(label):
+	y = tf.numpy_function(convert_ones_to_multi_classes, [label], tf.float32)
+	y.set_shape(NUM_CLASSES*2)
+
+	return y
+
+def read_dataset_multi_class(filename, dataset_path, image_only=True):
+	dataset = read_TFRecord(filename)
+	dataset = dataset.map(lambda data: (load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"], mapping(data["label"])),
+	                      num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
+	dataset = dataset.map(lambda image, _, label: (image, label), num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
+	dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)  # shuffle and batch with length of padding according to the the batch
+
+	return dataset
+
 
 if __name__ == "__main__":
 	# # get valid and train set
@@ -242,8 +261,8 @@ if __name__ == "__main__":
 	# calculate K_SN
 	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
 	for i in train_dataset.take(1):
-		print(i)
-	print(calculate_K_SN(train_dataset))
+		print(i[1].shape)
+	# print(calculate_K_SN(train_dataset))
 
 	# calculate class weight
 	# train_labels = []

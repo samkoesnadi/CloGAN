@@ -10,13 +10,22 @@ import skimage
 import skimage.color
 
 
-target_filename = "./sample/00002032_012.png"
-
+target_filename = "./sample/00002032_006.png"
+target_filename = "~/Downloads/pneumonia3.jpg"
 if __name__ == "__main__":
+	# if LOAD_WEIGHT_BOOL:
+	# 	model = tf.keras.models.load_model(SAVED_MODEL_PATH, custom_objects={'weighted_loss': get_weighted_loss(CHEXPERT_CLASS_WEIGHT), 'f1': f1})
+	# else:
+	# 	model = model_binaryXE()
+
+	model = model_binaryXE()
+
 	if LOAD_WEIGHT_BOOL:
-		model = tf.keras.models.load_model(SAVED_MODEL_PATH, custom_objects={'weighted_loss': get_weighted_loss(CHEXPERT_CLASS_WEIGHT), 'f1': f1})
-	else:
-		model = model_binaryXE()
+		target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
+		if target_model_weight:  # if weight is Found
+			model.load_weights(target_model_weight)
+		else:
+			print("[Load weight] No weight is found")
 
 	# the data
 	_image = read_image_and_preprocess(target_filename, use_sn=True)

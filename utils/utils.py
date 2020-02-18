@@ -2,7 +2,7 @@ import os
 import glob
 import re
 import numpy as np
-from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN
+from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NUM_CLASSES
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
 
@@ -23,6 +23,7 @@ def custom_sigmoid(x):
 	This functions fit SVM case because it is close to max points on {-1,1}
 	"""
 	return 1 / (1 + tf.math.exp(-2*tf.math.exp(1.)*x))
+	# return 1 / (1 + tf.math.exp(-x))
 
 def f1_svm(y_true, y_pred):
 	y_pred = custom_sigmoid(y_pred)
@@ -33,6 +34,27 @@ class AUC_SVM(tf.keras.metrics.AUC):
 		super().__init__(**kwargs)
 	def update_state(self, y_true, y_pred, sample_weight=None):
 		y_pred = custom_sigmoid(y_pred)
+		super().update_state(y_true, y_pred, sample_weight)
+
+def f1_mc(y_true, y_pred):
+	y_true = tf.reshape(y_true, [-1, NUM_CLASSES, 2])
+	y_pred = tf.reshape(y_pred, [-1, NUM_CLASSES, 2])
+
+	y_true = tf.cast(tf.argmax(y_true, 2), tf.float32)
+	y_pred = tf.cast(tf.argmax(y_pred, 2), tf.float32)
+
+	return f1(y_true, y_pred)
+
+class AUC_MC(tf.keras.metrics.AUC):
+	def __init__(self, **kwargs):
+		super().__init__(**kwargs)
+	def update_state(self, y_true, y_pred, sample_weight=None):
+		y_true = tf.reshape(y_true, [-1, NUM_CLASSES, 2])
+		y_pred = tf.reshape(y_pred, [-1, NUM_CLASSES, 2])
+
+		y_true = tf.cast(tf.argmax(y_true, 2), tf.float32)
+		y_pred = tf.cast(tf.argmax(y_pred, 2), tf.float32)
+
 		super().update_state(y_true, y_pred, sample_weight)
 
 def get_and_mkdir(path):

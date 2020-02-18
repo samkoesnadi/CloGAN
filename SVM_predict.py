@@ -10,8 +10,8 @@ import skimage
 import skimage.color
 
 
-target_filename = "./sample/00002032_012.png"
-
+target_filename = "./sample/00002032_006.png"
+target_filename = "~/Downloads/pneumonia3.jpg"
 if __name__ == "__main__":
 	model = model_MC_SVM()
 	if LOAD_WEIGHT_BOOL:
