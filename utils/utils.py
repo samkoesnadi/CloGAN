@@ -37,25 +37,13 @@ class AUC_SVM(tf.keras.metrics.AUC):
 		super().update_state(y_true, y_pred, sample_weight)
 
 def f1_mc(y_true, y_pred):
-	y_true = tf.reshape(y_true, [-1, NUM_CLASSES, 2])
-	y_pred = tf.reshape(y_pred, [-1, NUM_CLASSES, 2])
-
-	y_true = tf.cast(tf.argmax(y_true, 2), tf.float32)
-	y_pred = tf.cast(tf.argmax(y_pred, 2), tf.float32)
-
-	return f1(y_true, y_pred)
+	return f1(y_true[-1, 1::2], y_pred[-1, 1::2])
 
 class AUC_MC(tf.keras.metrics.AUC):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 	def update_state(self, y_true, y_pred, sample_weight=None):
-		y_true = tf.reshape(y_true, [-1, NUM_CLASSES, 2])
-		y_pred = tf.reshape(y_pred, [-1, NUM_CLASSES, 2])
-
-		y_true = tf.cast(tf.argmax(y_true, 2), tf.float32)
-		y_pred = tf.cast(tf.argmax(y_pred, 2), tf.float32)
-
-		super().update_state(y_true, y_pred, sample_weight)
+		super().update_state(y_true[-1, 1::2], y_pred[-1, 1::2], sample_weight)
 
 def get_and_mkdir(path):
 	dir_modelckp = os.path.dirname(path)

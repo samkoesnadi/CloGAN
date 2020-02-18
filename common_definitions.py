@@ -24,7 +24,7 @@ NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
-USE_CLASS_WEIGHT = True
+USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
 
 

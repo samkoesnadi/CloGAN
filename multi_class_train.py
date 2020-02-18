@@ -72,12 +72,10 @@ if __name__ == "__main__":
 
 		image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
-		prediction = model.predict(image)[0].numpy()
+		prediction = model.predict(image)[0]
+		prediction = prediction[1::2]  # get the true prediction
 
-		prediction = prediction.reshape([-1, 2])
-		prediction = np.argmax(prediction, axis=1)  # get the true prediction
-
-		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
+		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(prediction.size)}
 
 		lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
