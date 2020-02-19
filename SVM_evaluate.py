@@ -42,7 +42,7 @@ if __name__ == "__main__":
 	# val_dataset = read_dataset(CHEXPERT_VALID_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
 	test_dataset = read_dataset(CHEXPERT_TEST_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
 
-	test_label_nps = np.empty((CHEXPERT_TEST_N, NUM_CLASSES), dtype=np.float32)
+	test_label_nps = np.empty((CHEXPERT_TEST_N, NUM_CLASSES_CHEXPERT), dtype=np.float32)
 	test_img_nps = np.empty((CHEXPERT_TEST_N, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1), dtype=np.float32)
 	# get the ground truth labels
 	for i_d, (test_img, test_label) in enumerate(test_dataset):

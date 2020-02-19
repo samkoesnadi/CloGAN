@@ -65,13 +65,13 @@ if __name__ == "__main__":
 
 		prediction = custom_sigmoid(model.predict(image))[0].numpy()
 
-		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
+		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES_CHEXPERT)}
 
 		lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
 		gradcampps = Xception_gradcampp(model, image, use_svm=True)
 
-		results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
+		results = np.zeros((NUM_CLASSES_CHEXPERT, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
 		for i_g, gradcampp in enumerate(gradcampps):
 
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 		with file_writer_cm.as_default():
 			tf.summary.text("Patient 0 prediction:", str(prediction_dict), step=epoch,
 			                description="Prediction from sample file")
-			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES, step=epoch, description="GradCAM++ per classes")
+			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES_CHEXPERT, step=epoch, description="GradCAM++ per classes")
 			tf.summary.scalar("epoch_lr", lr, step=epoch)
 
 

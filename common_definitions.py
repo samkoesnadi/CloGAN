@@ -20,7 +20,8 @@ np.random.seed(0)
 
 # common global variables
 IMAGE_INPUT_SIZE = 224  # this is because of Xception
-NUM_CLASSES = 14
+NUM_CLASSES_CHEXPERT = 14
+NUM_CLASSES_CHESTXRAY14 = 15
 LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
@@ -60,6 +61,7 @@ ROC_RESULTS_PATH = "./report/results/ROC_%s.png"
 AUC_RESULTS_PATH = "./report/results/AUC.txt"
 
 # cheXpert dataset
+VALID_RATIO = 10/100
 CHEXPERT_TRAIN_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_train.tfrecord'
 CHEXPERT_VALID_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_valid.tfrecord'
 CHEXPERT_TEST_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_test.tfrecord'
@@ -70,6 +72,10 @@ CHEXPERT_VAL_N = 22341
 CHEXPERT_TEST_N = 234
 
 CHEXPERT_LABELS_KEY = ['No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other', 'Fracture', 'Support Devices']
+
+# chestXray-14 dataset
+CHESTXRAY_DATASET_PATH = "../datasets"
+
 
 	# statistics training
 pos = dict()

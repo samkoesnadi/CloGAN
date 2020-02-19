@@ -19,8 +19,8 @@ if __name__ == "__main__":
 
 	@tf.function
 	def multi_class_loss(y_true, y_pred):
-		y_true = tf.reshape(y_true, [-1, NUM_CLASSES, 2])
-		y_pred = tf.reshape(y_pred, [-1, NUM_CLASSES, 2])
+		y_true = tf.reshape(y_true, [-1, NUM_CLASSES_CHEXPERT, 2])
+		y_pred = tf.reshape(y_pred, [-1, NUM_CLASSES_CHEXPERT, 2])
 
 		y_together = tf.stack([y_true, y_pred], 2)
 		y_together = tf.transpose(y_together, [1,2,0,3])
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 		sum = tf.constant(0.)
 		for y in y_together:
 			sum += tf.math.reduce_mean(tf.keras.losses.categorical_crossentropy(y[0], y[1]))
-		return sum / NUM_CLASSES
+		return sum / NUM_CLASSES_CHEXPERT
 	_loss = multi_class_loss
 
 	_optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
 		gradcampps = Xception_gradcampp(model, image, use_svm=False, use_multi_class=True)
 
-		results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
+		results = np.zeros((NUM_CLASSES_CHEXPERT, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
 		for i_g, gradcampp in enumerate(gradcampps):
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 		with file_writer_cm.as_default():
 			tf.summary.text("Patient 0 prediction:", str(prediction_dict), step=epoch,
 			                description="Prediction from sample file")
-			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES, step=epoch, description="GradCAM++ per classes")
+			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES_CHEXPERT, step=epoch, description="GradCAM++ per classes")
 			tf.summary.scalar("epoch_lr", lr, step=epoch)
 
 

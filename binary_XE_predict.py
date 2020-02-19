@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
 	gradcampps = Xception_gradcampp(model, image)
 
-	results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
+	results = np.zeros((NUM_CLASSES_CHEXPERT, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
 	for i_g, gradcampp in enumerate(gradcampps):
 		gradcampp = convert_to_RGB(gradcampp)
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 		results[i_g] = result
 
 
-	max_row_n = ceil(math.sqrt(NUM_CLASSES + 1))
+	max_row_n = ceil(math.sqrt(NUM_CLASSES_CHEXPERT + 1))
 	f, axarr = plt.subplots(max_row_n, max_row_n)
 
 	# show input / ori image
