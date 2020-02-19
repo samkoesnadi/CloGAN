@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
 		lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
-		gradcampps = Xception_gradcampp(model, image, use_svm=True)
+		gradcampps = Xception_gradcampp(model, image, use_svm=False, use_multi_class=True)
 
 		results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
@@ -107,7 +107,8 @@ if __name__ == "__main__":
 	# Define the per-epoch callback.
 	cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
 
-	_callbacks = [clr, model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
+	# _callbacks = [clr, model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
+	_callbacks = [model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
 
 	# start training
 	model.fit(train_dataset,
