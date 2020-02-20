@@ -9,7 +9,7 @@ def model_binaryXE():
 	image_section_layer = image_section_model.output
 
 	image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
-	output_layer = tf.keras.layers.Dense(NUM_CLASSES_CHEXPERT, kernel_initializer=KERNEL_INITIALIZER)(image_section_layer)
+	output_layer = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER)(image_section_layer)
 	output_layer= tf.keras.layers.Activation('sigmoid', dtype='float32', name='predictions')(output_layer)
 
 	model = tf.keras.Model(inputs=input_layer, outputs=output_layer)

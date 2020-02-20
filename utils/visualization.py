@@ -19,9 +19,9 @@ def convert_to_RGB(dz):
     return skimage.color.rgba2rgb(colors)
 
 def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=True):
-    cams = np.zeros((NUM_CLASSES_CHEXPERT, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
+    cams = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
 
-    for i in tqdm(range(NUM_CLASSES_CHEXPERT), desc="Generate tensorboard's IMAGE"):
+    for i in tqdm(range(NUM_CLASSES), desc="Generate tensorboard's IMAGE"):
         cls = i
         y_c = input_model.output[0, cls*2+1] if use_multi_class else input_model.output[0, cls]
         y_c = custom_sigmoid(y_c) if use_svm else y_c
@@ -109,7 +109,7 @@ def calculate_roc_auc(labels, predictions):
     roc_auc = dict()
     thresholds = dict()
 
-    for i in range(NUM_CLASSES_CHEXPERT):
+    for i in range(NUM_CLASSES):
         fpr[i], tpr[i], _thresholds = roc_curve(labels[:, i], predictions[:, i])
 
         tpr[i] = np.where(np.isnan(tpr[i]), 1., tpr[i])  # IMPORTANT! because nan here might better be large number
@@ -130,15 +130,15 @@ def calculate_roc_auc(labels, predictions):
     roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
 
     # First aggregate all false positive rates
-    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(NUM_CLASSES_CHEXPERT)]))
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(NUM_CLASSES)]))
 
     # Then interpolate all ROC curves at this points
     mean_tpr = np.zeros_like(all_fpr)
-    for i in range(NUM_CLASSES_CHEXPERT):
+    for i in range(NUM_CLASSES):
         mean_tpr += interp(all_fpr, fpr[i], tpr[i])
 
     # Finally average it and compute AUC
-    mean_tpr /= NUM_CLASSES_CHEXPERT
+    mean_tpr /= NUM_CLASSES
 
     fpr["macro"] = all_fpr
     tpr["macro"] = mean_tpr
@@ -186,8 +186,8 @@ def Xception_gradcampp(model, img, use_svm=False, use_multi_class=False):
 
 if __name__ == "__main__":
 
-    train_labels = np.random.randint(2, size=(100, NUM_CLASSES_CHEXPERT))
-    train_predictions_baseline = np.random.sample(size=(100, NUM_CLASSES_CHEXPERT))
+    train_labels = np.random.randint(2, size=(100, NUM_CLASSES))
+    train_predictions_baseline = np.random.sample(size=(100, NUM_CLASSES))
     train_predictions_baseline = train_labels
     plot_roc(train_labels, train_predictions_baseline)
     # plot_roc("Test Baseline", test_labels, test_predictions_baseline, color=colors[0], linestyle='--')

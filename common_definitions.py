@@ -20,14 +20,13 @@ np.random.seed(0)
 
 # common global variables
 IMAGE_INPUT_SIZE = 224  # this is because of Xception
-NUM_CLASSES_CHEXPERT = 14
-NUM_CLASSES_CHESTXRAY14 = 15
+NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
-
+TRAIN_CHEXPERT = False  # important
 
 # SVM
 SVM_KERNEL_REGULARIZER = 0.5  # 0.5 is according to the paper
@@ -60,8 +59,10 @@ SAMPLE_FILENAME = "./sample/00002032_012.png"
 ROC_RESULTS_PATH = "./report/results/ROC_%s.png"
 AUC_RESULTS_PATH = "./report/results/AUC.txt"
 
-# cheXpert dataset
+# dataset common
 VALID_RATIO = 10/100
+
+# cheXpert dataset
 CHEXPERT_TRAIN_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_train.tfrecord'
 CHEXPERT_VALID_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_valid.tfrecord'
 CHEXPERT_TEST_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_test.tfrecord'
@@ -74,7 +75,37 @@ CHEXPERT_TEST_N = 234
 CHEXPERT_LABELS_KEY = ['No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other', 'Fracture', 'Support Devices']
 
 # chestXray-14 dataset
-CHESTXRAY_DATASET_PATH = "../datasets"
+CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH = 'cheXray14_datasets/CheXray14_train.tfrecord'
+CHESTXRAY_VALID_TARGET_TFRECORD_PATH = 'cheXray14_datasets/CheXray14_valid.tfrecord'
+CHESTXRAY_TEST_TARGET_TFRECORD_PATH = 'cheXray14_datasets/CheXray14_test.tfrecord'
+CHESTXRAY_DATASET_PATH = "../datasets/chestXray14/images"
+
+CHESTXRAY_TRAIN_N = 77872
+CHESTXRAY_VAL_N = 8652
+CHESTXRAY_TEST_N = 25596
+
+CHESTXRAY_LABELS_KEY = ["Atelectasis", "Cardiomegaly", "Effusion", "Infiltration", "Mass", "Nodule", "Pneumonia", "Pneumothorax", "Consolidation", "Edema", "Emphysema", "Fibrosis", "Pleural_Thickening", "Hernia"]
+
+
+# conclusion of dataset
+if TRAIN_CHEXPERT:
+	TRAIN_TARGET_TFRECORD_PATH = CHEXPERT_TRAIN_TARGET_TFRECORD_PATH
+	VALID_TARGET_TFRECORD_PATH = CHEXPERT_VALID_TARGET_TFRECORD_PATH
+	TEST_TARGET_TFRECORD_PATH = CHEXPERT_TEST_TARGET_TFRECORD_PATH
+	DATASET_PATH = CHEXPERT_DATASET_PATH
+	TRAIN_N = CHEXPERT_TRAIN_N
+	VAL_N = CHEXPERT_VAL_N
+	TEST_N = CHEXPERT_TEST_N
+	LABELS_KEY = CHEXPERT_LABELS_KEY
+else:
+	TRAIN_TARGET_TFRECORD_PATH = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
+	VALID_TARGET_TFRECORD_PATH = CHESTXRAY_VALID_TARGET_TFRECORD_PATH
+	TEST_TARGET_TFRECORD_PATH = CHESTXRAY_TEST_TARGET_TFRECORD_PATH
+	DATASET_PATH = CHESTXRAY_DATASET_PATH
+	TRAIN_N = CHESTXRAY_TRAIN_N
+	VAL_N = CHESTXRAY_VAL_N
+	TEST_N = CHESTXRAY_TEST_N
+	LABELS_KEY = CHESTXRAY_LABELS_KEY
 
 
 	# statistics training

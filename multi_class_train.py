@@ -13,14 +13,14 @@ if __name__ == "__main__":
 	model = model_MC_softmax()
 
 	# get the dataset
-	train_dataset = read_dataset_multi_class(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
-	val_dataset = read_dataset_multi_class(CHEXPERT_VALID_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
-	test_dataset = read_dataset_multi_class(CHEXPERT_TEST_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	train_dataset = read_dataset_multi_class(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH)
+	val_dataset = read_dataset_multi_class(VALID_TARGET_TFRECORD_PATH, DATASET_PATH)
+	test_dataset = read_dataset_multi_class(TEST_TARGET_TFRECORD_PATH, DATASET_PATH)
 
 	@tf.function
 	def multi_class_loss(y_true, y_pred):
-		y_true = tf.reshape(y_true, [-1, NUM_CLASSES_CHEXPERT, 2])
-		y_pred = tf.reshape(y_pred, [-1, NUM_CLASSES_CHEXPERT, 2])
+		y_true = tf.reshape(y_true, [-1, NUM_CLASSES, 2])
+		y_pred = tf.reshape(y_pred, [-1, NUM_CLASSES, 2])
 
 		y_together = tf.stack([y_true, y_pred], 2)
 		y_together = tf.transpose(y_together, [1,2,0,3])
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 		sum = tf.constant(0.)
 		for y in y_together:
 			sum += tf.math.reduce_mean(tf.keras.losses.categorical_crossentropy(y[0], y[1]))
-		return sum / NUM_CLASSES_CHEXPERT
+		return sum / NUM_CLASSES
 	_loss = multi_class_loss
 
 	_optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 	_metrics = {"predictions" : [f1_mc, AUC_MC(name="auc")]}  # give recall for metric it is more accurate
 
 	clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
-	               step_size=CLR_PATIENCE*ceil(CHEXPERT_TRAIN_N / BATCH_SIZE), mode='triangular')
+				   step_size=CLR_PATIENCE*ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
 
 	model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
 	                                               monitor="val_auc",
@@ -75,13 +75,13 @@ if __name__ == "__main__":
 		prediction = model.predict(image)[0]
 		prediction = prediction[1::2]  # get the true prediction
 
-		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(prediction.size)}
+		prediction_dict = {LABELS_KEY[i]: prediction[i] for i in range(prediction.size)}
 
 		lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
 		gradcampps = Xception_gradcampp(model, image, use_svm=False, use_multi_class=True)
 
-		results = np.zeros((NUM_CLASSES_CHEXPERT, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
+		results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
 		for i_g, gradcampp in enumerate(gradcampps):
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 		with file_writer_cm.as_default():
 			tf.summary.text("Patient 0 prediction:", str(prediction_dict), step=epoch,
 			                description="Prediction from sample file")
-			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES_CHEXPERT, step=epoch, description="GradCAM++ per classes")
+			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES, step=epoch, description="GradCAM++ per classes")
 			tf.summary.scalar("epoch_lr", lr, step=epoch)
 
 

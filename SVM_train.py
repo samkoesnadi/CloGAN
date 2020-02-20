@@ -13,9 +13,9 @@ if __name__ == "__main__":
 	model = model_MC_SVM()
 
 	# get the dataset
-	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
-	val_dataset = read_dataset(CHEXPERT_VALID_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
-	test_dataset = read_dataset(CHEXPERT_TEST_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH)
+	val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH)
+	test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH)
 
 	if USE_CLASS_WEIGHT:
 		_loss = get_square_hinge_weighted_loss(CHEXPERT_CLASS_WEIGHT)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 	_metrics = {"predictions" : [f1_svm, AUC_SVM(name="auc")]}  # give recall for metric it is more accurate
 
 	clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
-	               step_size=CLR_PATIENCE*ceil(CHEXPERT_TRAIN_N / BATCH_SIZE), mode='triangular')
+                   step_size=CLR_PATIENCE*ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
 
 	model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
 	                                               monitor="val_auc",
@@ -65,13 +65,13 @@ if __name__ == "__main__":
 
 		prediction = custom_sigmoid(model.predict(image))[0].numpy()
 
-		prediction_dict = {CHEXPERT_LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES_CHEXPERT)}
+		prediction_dict = {LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
 
 		lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
 		gradcampps = Xception_gradcampp(model, image, use_svm=True)
 
-		results = np.zeros((NUM_CLASSES_CHEXPERT, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
+		results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
 		for i_g, gradcampp in enumerate(gradcampps):
 
@@ -84,7 +84,7 @@ if __name__ == "__main__":
 		with file_writer_cm.as_default():
 			tf.summary.text("Patient 0 prediction:", str(prediction_dict), step=epoch,
 			                description="Prediction from sample file")
-			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES_CHEXPERT, step=epoch, description="GradCAM++ per classes")
+			tf.summary.image("Patient 0", results, max_outputs=NUM_CLASSES, step=epoch, description="GradCAM++ per classes")
 			tf.summary.scalar("epoch_lr", lr, step=epoch)
 
 

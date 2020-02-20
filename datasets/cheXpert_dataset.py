@@ -85,7 +85,7 @@ if __name__ == "__main__":
 	# 	print(image_features)
 
 	# calculate K_SN
-	train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH)
+	train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH)
 	for i in train_dataset.take(1):
 		print(i[1].shape)
 	# print(calculate_K_SN(train_dataset))

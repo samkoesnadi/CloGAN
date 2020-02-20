@@ -2,7 +2,7 @@ import os
 import glob
 import re
 import numpy as np
-from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NUM_CLASSES_CHEXPERT
+from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NUM_CLASSES
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
 

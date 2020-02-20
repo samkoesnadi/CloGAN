@@ -9,7 +9,7 @@ def model_MC_SVM():
 	image_section_layer = image_section_model.output
 
 	image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
-	output_layer = [tf.keras.layers.Dense(1, activation="linear", kernel_regularizer=tf.keras.regularizers.l2(SVM_KERNEL_REGULARIZER), kernel_initializer=KERNEL_INITIALIZER)(image_section_layer) for _ in range(NUM_CLASSES_CHEXPERT)]
+	output_layer = [tf.keras.layers.Dense(1, activation="linear", kernel_regularizer=tf.keras.regularizers.l2(SVM_KERNEL_REGULARIZER), kernel_initializer=KERNEL_INITIALIZER)(image_section_layer) for _ in range(NUM_CLASSES)]
 
 	output_layer = tf.keras.layers.Concatenate(name='predictions')(output_layer)
 
@@ -22,7 +22,7 @@ def model_MC_softmax():
 	image_section_layer = image_section_model.output
 
 	image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
-	output_layer = [tf.keras.layers.Dense(2, activation="softmax", kernel_initializer=KERNEL_INITIALIZER)(image_section_layer) for _ in range(NUM_CLASSES_CHEXPERT)]
+	output_layer = [tf.keras.layers.Dense(2, activation="softmax", kernel_initializer=KERNEL_INITIALIZER)(image_section_layer) for _ in range(NUM_CLASSES)]
 
 	output_layer = tf.keras.layers.Concatenate(name='predictions')(output_layer)
 

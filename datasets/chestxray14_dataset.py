@@ -34,12 +34,12 @@ def read_CheXray14_csv(csv_path, statistics=True):
 		train_csv.seek(0)
 
 		patient_datas = np.zeros((total_row, 4))
-		labels = np.zeros((total_row, NUM_CLASSES_CHESTXRAY14))
+		labels = np.zeros((total_row, NUM_CLASSES))
 
 		# parse the keys to dict
 		path_key = "Image Index"
 		patient_data_key = ["Patient Gender", "Patient Age", "Frontal/Lateral", "AP/PA"]
-		labels_key = ["No Finding", "Atelectasis", "Cardiomegaly", "Effusion", "Infiltration", "Mass", "Nodule", "Pneumonia", "Pneumothorax", "Consolidation", "Edema", "Emphysema", "Fibrosis", "Pleural_Thickening", "Hernia"]
+		labels_key = CHESTXRAY_LABELS_KEY
 
 		next(csvreader)  # to remove the header
 		for i_row, row in enumerate(csvreader):
@@ -59,42 +59,46 @@ def read_CheXray14_csv(csv_path, statistics=True):
 			patient_data.append(convert_to_half_plus_one(view_position, "AP", "PA"))  # f/l
 			patient_datas[i_row-1] = patient_data
 
-			temp = np.zeros(NUM_CLASSES_CHESTXRAY14)
+			temp = np.zeros(NUM_CLASSES)
+
+			try: label.remove("No Finding")
+			except: pass # remove no finding
+
 			temp[list(map(lambda x: labels_key.index(x), label))] = 1.
 			labels[i_row] = temp
 
-	if statistics : statisticsCheXpert(labels, NUM_CLASSES_CHESTXRAY14)
+	if statistics : statisticsCheXpert(labels, NUM_CLASSES)
 
 	return (path_key, patient_data_key, labels_key), (paths, patient_datas, labels), total_row
 
 if __name__ == "__main__":
 	# save to TFRecord
-	# with open(train_csv_file, "r") as f:  # train csv
-	# 	train_paths = [line.strip() for line in f]
-	#
-	# with open(test_csv_file, "r") as f:  # test csv
-	# 	test_paths = [line.strip() for line in f]
-	#
-	# (_, _, labels_key), (paths, patient_datas, labels), total_row = read_CheXray14_csv(data_csv_file, statistics=False)
-	#
-	# dict_patient_datas = dict(zip(paths, patient_datas))
-	# dict_labels = dict(zip(paths, labels))
-	#
-	# def get_patient_datas(paths):
-	# 	return np.array([dict_patient_datas[t_p] for t_p in paths])
-	#
-	# def get_labels(paths):
-	# 	return np.array([dict_labels[t_p] for t_p in paths])
-	#
-	# # write TFrecords valids and trains
-	# valids, trains = seperate_train_valid(np.array(train_paths), get_patient_datas(train_paths), get_labels(train_paths), len(train_paths))
-	#
-	# write_csv_to_tfrecord(valids, valid_target_tfrecord_path)
-	# write_csv_to_tfrecord(trains, train_target_tfrecord_path)
-	#
-	# # write TFrecords tests
-	# write_csv_to_tfrecord((np.array(test_paths), get_patient_datas(test_paths), get_labels(test_paths)), test_target_tfrecord_path)
+	with open(train_csv_file, "r") as f:  # train csv
+		train_paths = [line.strip() for line in f]
 
-	train_dataset = read_dataset(train_target_tfrecord_path, dataset_path, num_class=NUM_CLASSES_CHESTXRAY14)
+	with open(test_csv_file, "r") as f:  # test csv
+		test_paths = [line.strip() for line in f]
+
+	(_, _, labels_key), (paths, patient_datas, labels), total_row = read_CheXray14_csv(data_csv_file, statistics=False)
+
+	dict_patient_datas = dict(zip(paths, patient_datas))
+	dict_labels = dict(zip(paths, labels))
+
+	def get_patient_datas(paths):
+		return np.array([dict_patient_datas[t_p] for t_p in paths])
+
+	def get_labels(paths):
+		return np.array([dict_labels[t_p] for t_p in paths])
+
+	# write TFrecords valids and trains
+	valids, trains = seperate_train_valid(np.array(train_paths), get_patient_datas(train_paths), get_labels(train_paths), len(train_paths))
+
+	write_csv_to_tfrecord(valids, valid_target_tfrecord_path)
+	write_csv_to_tfrecord(trains, train_target_tfrecord_path)
+
+	# write TFrecords tests
+	write_csv_to_tfrecord((np.array(test_paths), get_patient_datas(test_paths), get_labels(test_paths)), test_target_tfrecord_path)
+
+	train_dataset = read_dataset(train_target_tfrecord_path, dataset_path, num_class=NUM_CLASSES)
 	for i in train_dataset.take(1):
 		print(i)

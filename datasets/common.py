@@ -5,7 +5,7 @@ from tqdm import tqdm
 import skimage.io
 import skimage.transform
 
-def statisticsCheXpert(labels, labels_key=CHEXPERT_LABELS_KEY, num_class=14):
+def statisticsCheXpert(labels, labels_key=LABELS_KEY, num_class=14):
 	totals = np.zeros((num_class,2))
 
 	for i in range(num_class):
@@ -161,10 +161,10 @@ def read_dataset(filename, dataset_path, image_only=True, num_class=14):
 def convert_ones_to_multi_classes(label):
 	return np.array([[0,1] if l else [1,0] for l in label], dtype=np.float32).flatten()
 
-@tf.function(input_signature=(tf.TensorSpec(shape=[NUM_CLASSES_CHEXPERT], dtype=tf.float32),))
+@tf.function(input_signature=(tf.TensorSpec(shape=[NUM_CLASSES], dtype=tf.float32),))
 def mapping(label):
 	y = tf.numpy_function(convert_ones_to_multi_classes, [label], tf.float32)
-	y.set_shape(NUM_CLASSES_CHEXPERT * 2)
+	y.set_shape(NUM_CLASSES * 2)
 
 	return y
 
