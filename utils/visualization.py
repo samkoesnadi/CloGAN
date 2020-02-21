@@ -108,8 +108,9 @@ def calculate_roc_auc(labels, predictions):
     tpr = dict()
     roc_auc = dict()
     thresholds = dict()
+    size = labels.shape[-1]
 
-    for i in range(NUM_CLASSES):
+    for i in range(size):
         fpr[i], tpr[i], _thresholds = roc_curve(labels[:, i], predictions[:, i])
 
         tpr[i] = np.where(np.isnan(tpr[i]), 1., tpr[i])  # IMPORTANT! because nan here might better be large number
@@ -130,15 +131,15 @@ def calculate_roc_auc(labels, predictions):
     roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
 
     # First aggregate all false positive rates
-    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(NUM_CLASSES)]))
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(size)]))
 
     # Then interpolate all ROC curves at this points
     mean_tpr = np.zeros_like(all_fpr)
-    for i in range(NUM_CLASSES):
+    for i in range(size):
         mean_tpr += interp(all_fpr, fpr[i], tpr[i])
 
     # Finally average it and compute AUC
-    mean_tpr /= NUM_CLASSES
+    mean_tpr /= size
 
     fpr["macro"] = all_fpr
     tpr["macro"] = mean_tpr

@@ -26,7 +26,12 @@ DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
-TRAIN_CHEXPERT = False  # important
+TRAIN_CHEXPERT = True  # important
+EVAL_CHEXPERT = False  # important
+
+# evaluation matter
+TRAIN_FIVE_CATS_INDEX = [2, 5, 6, 8, 10] if TRAIN_CHEXPERT else [1, 9, 8, 0, 2]
+EVAL_FIVE_CATS_INDEX = [2, 5, 6, 8, 10] if EVAL_CHEXPERT else [1, 9, 8, 0, 2]
 
 # SVM
 SVM_KERNEL_REGULARIZER = 0.5  # 0.5 is according to the paper
