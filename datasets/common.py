@@ -5,7 +5,7 @@ from tqdm import tqdm
 import skimage.io
 import skimage.transform
 
-def statisticsCheXpert(labels, labels_key=LABELS_KEY, num_class=14):
+def statisticsCheXpert(labels, num_class=14, labels_key=LABELS_KEY):
 	totals = np.zeros((num_class,2))
 
 	for i in range(num_class):

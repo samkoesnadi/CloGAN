@@ -12,6 +12,7 @@ from utils.utils import *
 import csv
 from scipy import interp
 from scipy.ndimage.interpolation import zoom
+from scipy.interpolate import interp1d
 
 def convert_to_RGB(dz):
     norm = plt.Normalize()
@@ -124,6 +125,18 @@ def calculate_roc_auc(labels, predictions):
         stable_index = get_best_trade_off(_fpr, _tpr, threshold_len, extra_len)
         thresholds[i] = ((_thresholds[stable_index] + (_thresholds[stable_index+1] if stable_index + 1 < threshold_len else 0. )) / 2, _fpr[stable_index], _tpr[stable_index])
 
+        if AUC_INTERP_TOGGLE:
+            _unique_fpri = np.unique(fpr[i])
+            _unique_tpri = np.zeros_like(_unique_fpri)
+            for i_uniq, j_uniq in enumerate(_unique_fpri):
+                _unique_tpri[i_uniq] = np.take(tpr[i], np.argwhere(fpr[i] == j_uniq).flatten()).max()
+
+            f_interp = interp1d(_unique_fpri, _unique_tpri, kind='linear')
+
+            x = np.linspace(0, 1., num=INTERP_NUM_STEPS, endpoint=True)
+            fpr[i] = x
+            tpr[i] = f_interp(x)
+
         roc_auc[i] = auc(fpr[i], tpr[i])
 
     # Compute micro-average ROC curve and ROC area
@@ -147,7 +160,7 @@ def calculate_roc_auc(labels, predictions):
 
     return fpr, tpr, roc_auc, thresholds
 
-def plot_roc(labels, predictions, **kwargs):
+def plot_roc(labels, predictions):
     fpr, tpr, roc_auc, thresholds = calculate_roc_auc(labels, predictions)
 
     get_and_mkdir(ROC_RESULTS_PATH)
@@ -168,6 +181,7 @@ def plot_roc(labels, predictions, **kwargs):
         _i_toprint = i+1 if isinstance(i, int) else i
         plt.figure()
         lw = 2
+
         plt.plot(fpr[i], tpr[i], color='darkred',
                lw=lw, label=str(_i_toprint) + ' (area = %0.2f)' % roc_auc[i])
         plt.plot([0, 1], [0, 1], color='lightblue', lw=lw, linestyle='--')
@@ -178,7 +192,7 @@ def plot_roc(labels, predictions, **kwargs):
         # plt.title('Receiver operating characteristic')
         plt.legend(loc='lower right')
         plt.savefig(ROC_RESULTS_PATH % str(_i_toprint))
-
+    return list(map(float, roc_auc.values()))[:-2]
 
 
 def Xception_gradcampp(model, img, use_svm=False, use_multi_class=False):

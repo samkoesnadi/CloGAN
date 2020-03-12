@@ -7,8 +7,6 @@ import datetime
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
 import tensorflow.keras
-from tensorflow.keras.backend import manual_variable_initialization
-manual_variable_initialization(True)
 tf.keras.backend.clear_session()
 tf.random.set_seed(0)
 np.random.seed(0)
@@ -26,8 +24,9 @@ DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
-TRAIN_CHEXPERT = True  # important
-EVAL_CHEXPERT = False  # important
+TRAIN_CHEXPERT = False  # important if false then, it is trained on chestxray14
+EVAL_CHEXPERT = False  # important if false then, it is trained on chestxray14
+AUC_INTERP_TOGGLE = True  # activate AUC interp
 
 # evaluation matter
 TRAIN_FIVE_CATS_INDEX = [2, 5, 6, 8, 10] if TRAIN_CHEXPERT else [1, 9, 8, 0, 2]
@@ -36,6 +35,9 @@ EVAL_FIVE_CATS_INDEX = [2, 5, 6, 8, 10] if EVAL_CHEXPERT else [1, 9, 8, 0, 2]
 # SVM
 SVM_KERNEL_REGULARIZER = 0.5  # 0.5 is according to the paper
 
+
+# AUC interpolation
+INTERP_NUM_STEPS = 10000
 
 # for training
 BUFFER_SIZE = 1600
@@ -88,6 +90,7 @@ CHESTXRAY_DATASET_PATH = "../datasets/chestXray14/images"
 CHESTXRAY_TRAIN_N = 77872
 CHESTXRAY_VAL_N = 8652
 CHESTXRAY_TEST_N = 25596
+# CHESTXRAY_TEST_N = 234
 
 CHESTXRAY_LABELS_KEY = ["Atelectasis", "Cardiomegaly", "Effusion", "Infiltration", "Mass", "Nodule", "Pneumonia", "Pneumothorax", "Consolidation", "Edema", "Emphysema", "Fibrosis", "Pleural_Thickening", "Hernia"]
 
