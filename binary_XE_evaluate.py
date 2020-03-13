@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
 	print("F1: ", np.mean(f1(test_label_nps, results).numpy()))
 
-	roc_auc = plot_roc(test_label_nps, results)
+	roc_auc = plot_roc(test_label_nps, results, True)
 
 	# print('test auc:', (_metrics["predictions"][1](test_label_nps, results).numpy()))
 	print("test auc:", roc_auc, ", auc macro:", sum(roc_auc)/len(roc_auc))

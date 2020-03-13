@@ -103,7 +103,7 @@ def get_best_trade_off(_fpr, _tpr, threshold_len, extra_len):
 
     return stable_index
 
-def calculate_roc_auc(labels, predictions):
+def calculate_roc_auc(labels, predictions, auc_interp_toggle):
     # Compute ROC curve and ROC area for each class
     fpr = dict()
     tpr = dict()
@@ -125,7 +125,7 @@ def calculate_roc_auc(labels, predictions):
         stable_index = get_best_trade_off(_fpr, _tpr, threshold_len, extra_len)
         thresholds[i] = ((_thresholds[stable_index] + (_thresholds[stable_index+1] if stable_index + 1 < threshold_len else 0. )) / 2, _fpr[stable_index], _tpr[stable_index])
 
-        if AUC_INTERP_TOGGLE:
+        if auc_interp_toggle:
             _unique_fpri = np.unique(fpr[i])
             _unique_tpri = np.zeros_like(_unique_fpri)
             for i_uniq, j_uniq in enumerate(_unique_fpri):
@@ -160,8 +160,10 @@ def calculate_roc_auc(labels, predictions):
 
     return fpr, tpr, roc_auc, thresholds
 
-def plot_roc(labels, predictions):
-    fpr, tpr, roc_auc, thresholds = calculate_roc_auc(labels, predictions)
+def plot_roc(labels, predictions, compare_interp=True):
+    fpr, tpr, roc_auc, thresholds = calculate_roc_auc(labels, predictions, AUC_INTERP_TOGGLE)
+    if compare_interp:
+        fpr2, tpr2, roc_auc2, thresholds2 = calculate_roc_auc(labels, predictions, not AUC_INTERP_TOGGLE)
 
     get_and_mkdir(ROC_RESULTS_PATH)
 
@@ -183,7 +185,10 @@ def plot_roc(labels, predictions):
         lw = 2
 
         plt.plot(fpr[i], tpr[i], color='darkred',
-               lw=lw, label=str(_i_toprint) + ' (area = %0.2f)' % roc_auc[i])
+               lw=lw, label=("interp" if AUC_INTERP_TOGGLE else "no-interp") + ' (area = %0.3f)' % roc_auc[i])
+        if compare_interp:
+            plt.plot(fpr2[i], tpr2[i], color='darkorange',
+                   lw=lw, label=("interp" if not AUC_INTERP_TOGGLE else "no-interp") + ' (area = %0.3f)' % roc_auc2[i])
         plt.plot([0, 1], [0, 1], color='lightblue', lw=lw, linestyle='--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
