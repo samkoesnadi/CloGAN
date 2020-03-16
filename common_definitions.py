@@ -24,9 +24,9 @@ DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
-TRAIN_CHEXPERT = False  # important if false then, it is trained on chestxray14
+TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
-AUC_INTERP_TOGGLE = True  # activate AUC interp
+AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # evaluation matter
 TRAIN_FIVE_CATS_INDEX = [2, 5, 6, 8, 10] if TRAIN_CHEXPERT else [1, 9, 8, 0, 2]
