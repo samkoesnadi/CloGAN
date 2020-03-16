@@ -18,7 +18,7 @@ ALL_DISTANCES = [4, 16, 32]
 ALL_ANGLES = [0, np.pi / 4, np.pi / 2, 3 * np.pi / 4]  # all 4 directions
 PROPS_TO_MEASURE = ["dissimilarity", "homogeneity", "correlation", "energy"]
 FEATURES_LEN = len(ALL_DISTANCES) * len(ALL_ANGLES) * len(PROPS_TO_MEASURE)
-FEATURES_NP_FILE = "../records/chexpert_train_input_features"
+FEATURES_NP_FILE = "../records/chestxray14_train_input_features"
 N_SAMPLES = 60
 
 
@@ -103,12 +103,12 @@ def read_filepath_dataset(filename, dataset_path):
 
 if __name__ == "__main__":
     # generate
-    # features_nps = np.zeros((TRAIN_N, FEATURES_LEN))
-    # for i_img, img in tqdm(enumerate(read_filepath_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH)), total=TRAIN_N, miniters=250):
-    #     img = np.squeeze(img.numpy().astype(np.uint8))  # convert to numpy array
-    #     features = calc_glcm_features(img)
-    #     features_nps[i_img * FEATURES_LEN:(i_img + 1) * FEATURES_LEN] = features
-    # np.save(FEATURES_NP_FILE, features_nps)  # save it
+    features_nps = np.zeros((TRAIN_N, FEATURES_LEN))
+    for i_img, img in tqdm(enumerate(read_filepath_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH)), total=TRAIN_N):
+        img = np.squeeze(img.numpy().astype(np.uint8))  # convert to numpy array
+        features = calc_glcm_features(img)
+        features_nps[i_img * FEATURES_LEN:(i_img + 1) * FEATURES_LEN] = features
+    np.save(FEATURES_NP_FILE, features_nps)  # save it
 
     # load
     features_nps = np.load(FEATURES_NP_FILE + ".npy")
@@ -120,8 +120,9 @@ if __name__ == "__main__":
 
     for i in tqdm(sample_numbers):
         for j in range(TRAIN_N):
-            if j in sample_numbers: continue
+            if i == j: continue
             welford_(kernel_wasserstein_distance(features_nps[i], features_nps[j]))
+        print(i, ":", welford_)
 
     print(welford_)
     print("k:", welford_.k)
