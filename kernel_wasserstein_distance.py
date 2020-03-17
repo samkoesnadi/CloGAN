@@ -97,6 +97,7 @@ if __name__ == "__main__":
         if USE_CUPY:
             features_nps = features_nps.get()
 
+        print("### Running PCA... ###")
         _pca = PCA(n_components=FEATURES_N)
 
         features_nps = _pca.fit_transform(features_nps)
@@ -107,6 +108,7 @@ if __name__ == "__main__":
     # run kernel_wasserstein_distance
     rng = default_rng()
     sample_numbers = np.array(rng.choice(TRAIN_N, size=N_SAMPLES, replace=False))
+    features_nps = np.array(features_nps)  # because of cupy conversion
     welford_ = Welford()
 
     for i in tqdm(sample_numbers, desc="MAIN LOOP"):
