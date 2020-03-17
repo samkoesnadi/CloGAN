@@ -94,6 +94,9 @@ if __name__ == "__main__":
         # load
         features_nps = np.load(FEATURES_NP_FILE + ".npy")
 
+        if USE_CUPY:
+            features_nps = features_nps.get()
+
         _pca = PCA(n_components=FEATURES_N)
 
         features_nps = _pca.fit_transform(features_nps)
