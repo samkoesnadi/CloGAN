@@ -61,7 +61,7 @@ def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray):
 
     if USE_CUPY: np.cuda.Stream.null.synchronize()
 
-    return W_2
+    return float(W_2)
 
 
 
