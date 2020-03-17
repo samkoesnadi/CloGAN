@@ -1,55 +1,18 @@
-from skimage.feature import *
-from skimage import data
-import numpy as np
-from datasets.common import *
-import matplotlib.pyplot as plt
-import time
-import skimage.io
-import skimage.transform
-from scipy.stats import wasserstein_distance
-import sklearn.metrics.pairwise
-import math
 from numpy.random import default_rng
 from utils.welford import Welford
+from datasets.cheXpert_dataset import read_dataset
+from utils.visualization import *
+from models.multi_label import *
 
 
-NUM_LEVELS = 128
-ALL_DISTANCES = [4, 16, 32]
-ALL_ANGLES = [0, np.pi / 4, np.pi / 2, 3 * np.pi / 4]  # all 4 directions
-PROPS_TO_MEASURE = ["dissimilarity", "homogeneity", "correlation", "energy"]
-FEATURES_LEN = len(ALL_DISTANCES) * len(ALL_ANGLES) * len(PROPS_TO_MEASURE)
-FEATURES_NP_FILE = "../records/chestxray14_train_input_features"
+GENERATE_FEATURE = True
+
+if TRAIN_CHEXPERT:
+    FEATURES_NP_FILE = "../records/chextpert_train_input_features"
+else:
+    FEATURES_NP_FILE = "../records/chestray14_train_input_features"
+
 N_SAMPLES = 60
-
-
-def read_resize_image(filename, num_levels):
-    # img = skimage.transform.resize(
-    #     skimage.io.imread(filename, as_gray=True),
-    #     (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE), preserve_range=True)
-    # img = skimage.io.imread(filename, as_gray=True)
-
-    # load image
-    img = tf.io.read_file(filename)
-    img = tf.image.decode_jpeg(img, channels=1)  # output grayscale image
-    img = tf.image.resize(img, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
-
-    # process image to num of levels
-    img = (img * num_levels // 256)
-    return img
-
-
-def calc_glcm_features(img):
-    glcm = greycomatrix(img, distances=ALL_DISTANCES, angles=ALL_ANGLES, levels=NUM_LEVELS,
-                        symmetric=True, normed=True)
-
-    len_per_column = len(ALL_DISTANCES) * len(ALL_ANGLES)
-
-    # extract features
-    features_matrix = np.zeros((len(PROPS_TO_MEASURE) * len_per_column))
-    for i_prop, prop in enumerate(PROPS_TO_MEASURE):
-        features_matrix[i_prop * len_per_column:(i_prop + 1) * len_per_column] = greycoprops(glcm, prop).flatten()
-
-    return features_matrix
 
 
 def calc_J(n):
@@ -92,23 +55,30 @@ def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray):
     return W_2
 
 
-def read_filepath_dataset(filename, dataset_path):
-    dataset = read_TFRecord(filename)
-    dataset = dataset.map(
-        lambda data: read_resize_image(tf.strings.join([dataset_path, '/', data["image_path"]]), NUM_LEVELS),
-        num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
-
-    return dataset
-
 
 if __name__ == "__main__":
-    # generate
-    features_nps = np.zeros((TRAIN_N, FEATURES_LEN))
-    for i_img, img in tqdm(enumerate(read_filepath_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH)), total=TRAIN_N):
-        img = np.squeeze(img.numpy().astype(np.uint8))  # convert to numpy array
-        features = calc_glcm_features(img)
-        features_nps[i_img * FEATURES_LEN:(i_img + 1) * FEATURES_LEN] = features
-    np.save(FEATURES_NP_FILE, features_nps)  # save it
+    # features1 = calc_glcm_features(read_resize_image("C:/Users/samue/Desktop/sample_dataset/chexpert/view1_frontal_3.jpg", NUM_LEVELS).numpy())
+    # features2 = calc_glcm_features(read_resize_image("C:/Users/samue/Desktop/sample_dataset/chexpert/view1_frontal_1.jpg", NUM_LEVELS).numpy())
+    # print(kernel_wasserstein_distance(features1, features2))
+
+    if GENERATE_FEATURE:
+        model = model_binaryXE_mid()
+        model.load_weights("networks/chexpert.hdf5" if TRAIN_CHEXPERT else "networks/chestxray14.hdf5")
+
+        # get the dataset
+        train_dataset = read_dataset(
+            CHEXPERT_TRAIN_TARGET_TFRECORD_PATH if TRAIN_CHEXPERT else CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH,
+            CHEXPERT_DATASET_PATH if TRAIN_CHEXPERT else CHESTXRAY_DATASET_PATH, shuffle=False)
+
+        _train_n = TRAIN_N
+
+        features_nps = np.zeros((_train_n, 2048))
+        # get the ground truth labels
+        for i_d, (test_img, _) in tqdm(enumerate(train_dataset), total=math.ceil(_train_n / BATCH_SIZE)):
+            # Evaluate the model on the test data using `evaluate`
+            features_nps[i_d*BATCH_SIZE: (i_d + 1)*BATCH_SIZE] = model.predict(test_img)[1]
+
+        np.save(FEATURES_NP_FILE, features_nps)  # save it
 
     # load
     features_nps = np.load(FEATURES_NP_FILE + ".npy")

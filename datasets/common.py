@@ -149,7 +149,7 @@ def read_TFRecord(filename, num_class=14):
 
 	return parsed_dataset
 
-def read_dataset(filename, dataset_path, image_only=True, num_class=14, evaluation_mode=False):
+def read_dataset(filename, dataset_path, image_only=True, num_class=14, evaluation_mode=False, shuffle=True):
 	if evaluation_mode:
 		dataset = read_TFRecord(filename, num_class)
 		dataset = dataset.map(lambda data: (
@@ -163,7 +163,8 @@ def read_dataset(filename, dataset_path, image_only=True, num_class=14, evaluati
 		load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"], data["label"]),
 							  num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
 		dataset = dataset.map(lambda image, _, label: (image, label), num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
-	dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)  # shuffle and batch with length of padding according to the the batch
+	dataset = dataset.shuffle(BUFFER_SIZE) if shuffle else dataset
+	dataset = dataset.batch(BATCH_SIZE)  # shuffle and batch with length of padding according to the the batch
 
 	return dataset
 
