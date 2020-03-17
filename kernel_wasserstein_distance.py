@@ -5,12 +5,6 @@ from utils.visualization import *
 from models.multi_label import *
 from sklearn.decomposition import PCA
 
-USE_CUPY = True
-try:
-    import cupy as np
-except ImportError as e:
-    USE_CUPY = False
-
 
 GENERATE_FEATURE = True
 PROCESS_DIMRED = True
@@ -89,6 +83,13 @@ if __name__ == "__main__":
             features_nps[i_d*BATCH_SIZE: (i_d + 1)*BATCH_SIZE] = model.predict(test_img)[1]
 
         np.save(FEATURES_NP_FILE, features_nps)  # save it
+
+    # swap np with cp
+    USE_CUPY = True
+    try:
+        import cupy as np
+    except ImportError as e:
+        USE_CUPY = False
 
     if PROCESS_DIMRED:  # process dimred
         # load
