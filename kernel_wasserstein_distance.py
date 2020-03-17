@@ -59,6 +59,8 @@ def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray):
           + np.trace(J_2 @ J_2.T @ calc_K(v_values, v_values)) \
           - 2 * np.trace(calc_K(u_values, v_values) @ J_2 @ J_2.T @ calc_K(v_values, u_values) @ J_1 @ J_1.T) ** .5
 
+    if USE_CUPY: np.cuda.Stream.null.synchronize()
+
     return W_2
 
 
