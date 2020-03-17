@@ -3,7 +3,7 @@ from utils.welford import Welford
 from datasets.cheXpert_dataset import read_dataset
 from utils.visualization import *
 from models.multi_label import *
-
+from sklearn.decomposition import PCA
 
 USE_CUPY = True
 try:
@@ -13,6 +13,7 @@ except ImportError as e:
 
 
 GENERATE_FEATURE = True
+PROCESS_DIMRED = True
 
 if TRAIN_CHEXPERT:
     FEATURES_NP_FILE = "../records/chextpert_train_input_features"
@@ -20,7 +21,7 @@ else:
     FEATURES_NP_FILE = "../records/chestray14_train_input_features"
 
 N_SAMPLES = 60
-
+FEATURES_N = 64
 
 def calc_J(n):
     arrow_1 = np.ones(n)
@@ -89,8 +90,16 @@ if __name__ == "__main__":
 
         np.save(FEATURES_NP_FILE, features_nps)  # save it
 
-    # load
-    features_nps = np.load(FEATURES_NP_FILE + ".npy")
+    if PROCESS_DIMRED:  # process dimred
+        # load
+        features_nps = np.load(FEATURES_NP_FILE + ".npy")
+
+        _pca = PCA(n_components=FEATURES_N)
+
+        features_nps = _pca.fit_transform(features_nps)
+        np.save(FEATURES_NP_FILE + "_dimred", features_nps)
+    else:
+        features_nps = np.load(FEATURES_NP_FILE + "_dimred.npy")
 
     # run kernel_wasserstein_distance
     rng = default_rng()
