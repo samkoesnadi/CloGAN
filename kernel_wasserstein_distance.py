@@ -5,6 +5,13 @@ from utils.visualization import *
 from models.multi_label import *
 
 
+USE_CUPY = True
+try:
+    import cupy as np
+except ImportError as e:
+    USE_CUPY = False
+
+
 GENERATE_FEATURE = True
 
 if TRAIN_CHEXPERT:
@@ -85,11 +92,11 @@ if __name__ == "__main__":
 
     # run kernel_wasserstein_distance
     rng = default_rng()
-    sample_numbers = rng.choice(TRAIN_N, size=N_SAMPLES, replace=False)
+    sample_numbers = np.array(rng.choice(TRAIN_N, size=N_SAMPLES, replace=False))
     welford_ = Welford()
 
-    for i in tqdm(sample_numbers):
-        for j in range(TRAIN_N):
+    for i in tqdm(sample_numbers, desc="MAIN LOOP"):
+        for j in tqdm(range(TRAIN_N), desc="iter for TRAIN_N"):
             if i == j: continue
             welford_(kernel_wasserstein_distance(features_nps[i], features_nps[j]))
         print(i, ":", welford_)

@@ -3,6 +3,7 @@ h5py
 keras
 matplotlib
 numpy>=1.14
+cupy-cuda101
 pillow
 tqdm
 tensorflow-gpu
