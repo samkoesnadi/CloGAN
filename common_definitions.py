@@ -175,3 +175,12 @@ elif IMAGE_INPUT_SIZE == 224:
 else:
 	K_SN = 1.
 	raise Exception("Please re-calculate K_SN")
+
+FEATURES_NP_FILE_1 = "../records/chextpert_train_input_features"
+FEATURES_NP_FILE_2 = "../records/chestray14_train_input_features"
+
+# kwd and manifold_learning
+if TRAIN_CHEXPERT:
+	FEATURES_NP_FILE = FEATURES_NP_FILE_1
+else:
+	FEATURES_NP_FILE = FEATURES_NP_FILE_2

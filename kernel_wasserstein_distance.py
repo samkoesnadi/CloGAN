@@ -6,13 +6,8 @@ from models.multi_label import *
 from sklearn.decomposition import PCA
 
 
-GENERATE_FEATURE = True
-PROCESS_DIMRED = True
-
-if TRAIN_CHEXPERT:
-    FEATURES_NP_FILE = "../records/chextpert_train_input_features"
-else:
-    FEATURES_NP_FILE = "../records/chestray14_train_input_features"
+GENERATE_FEATURE = False
+PROCESS_DIMRED = False
 
 N_SAMPLES = 60
 FEATURES_N = 64
@@ -112,11 +107,15 @@ if __name__ == "__main__":
     features_nps = np.array(features_nps)  # because of cupy conversion
     welford_ = Welford()
 
-    for i in tqdm(sample_numbers, desc="MAIN LOOP"):
-        for j in tqdm(range(TRAIN_N), desc="iter for TRAIN_N"):
-            if i == j: continue
-            welford_(kernel_wasserstein_distance(features_nps[i], features_nps[j]))
-        print(i, ":", welford_)
+    with tqdm(total=N_SAMPLES, desc="MAIN LOOP", bar_format="{postfix[0]} {postfix[1][value]}",
+              postfix=[int, dict(value=0)]) as t:
+        for i in sample_numbers:
+            for j in tqdm(range(TRAIN_N), desc="iter for TRAIN_N"):
+                if i == j: continue
+                welford_(kernel_wasserstein_distance(features_nps[i], features_nps[j]))
+            t.postfix[0] = i
+            t.postfix[1]["value"] = welford_
+            t.update()
 
     print(welford_)
     print("k:", welford_.k)
