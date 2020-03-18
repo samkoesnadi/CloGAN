@@ -11,7 +11,7 @@ try:
     import cupy as np
 except ImportError as e:
     USE_CUPY = False
-    
+
 N_SAMPLES = 60
 FEATURES_N = 64
 
@@ -69,14 +69,13 @@ if __name__ == "__main__":
     features_nps_2 = np.array(features_nps_2)  # because of cupy conversion
     welford_ = Welford()
 
-    with tqdm(total=N_SAMPLES, desc="MAIN LOOP", bar_format="{postfix[0]} {postfix[1][value]}",
-              postfix=[int, dict(value=0)]) as t:
+    with tqdm(total=N_SAMPLES, desc="MAIN LOOP",
+              postfix=[int(0), dict(value=0)]) as t:
         for i in sample_numbers:
             for j in tqdm(range(CHESTXRAY_TRAIN_N), desc="iter for TRAIN_N"):
                 if i == j: continue
                 welford_(kernel_wasserstein_distance(features_nps_1[i], features_nps_2[j]))
-            t.postfix[0] = i
-            t.postfix[1]["value"] = welford_
+            t.set_postfix(i_=i, value=welford_)
             t.update()
 
     print(welford_)
