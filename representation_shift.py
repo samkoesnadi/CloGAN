@@ -37,18 +37,11 @@ if __name__ == "__main__":
     for i_test, (input, label) in tqdm(enumerate(test_dataset)):
         _feature_nps_2[i_test * BATCH_SIZE : (i_test+1) * BATCH_SIZE] = model.predict(input)[1]
 
-    # swap np with cp
-    USE_CUPY = True
-    try:
-        import cupy as np
-    except ImportError as e:
-        USE_CUPY = False
-
     # run the kwd
     welford_ = Welford()
     with tqdm(total=_test_n, desc="MAIN LOOP") as t:
         for i_test in range(_test_n):
-            welford_(kernel_wasserstein_distance(_feature_nps_1[i_test], _feature_nps_2[i_test], USE_CUPY))
+            welford_(kernel_wasserstein_distance(_feature_nps_1[i_test], _feature_nps_2[i_test]))
             t.set_postfix(i_=i_test, value=welford_)
             t.update()
 
