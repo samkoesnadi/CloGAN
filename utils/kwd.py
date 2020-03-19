@@ -1,11 +1,11 @@
 from common_definitions import *
 
-# swap np with cp
-USE_CUPY = True
-try:
-    import cupy as np
-except ImportError as e:
-    USE_CUPY = False
+# # swap np with cp
+# USE_CUPY = True
+# try:
+#     import cupy as np
+# except ImportError as e:
+#     USE_CUPY = False
 
 def calc_J(n):
     arrow_1 = np.ones(n)

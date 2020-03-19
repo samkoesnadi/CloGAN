@@ -6,12 +6,12 @@ from models.multi_label import *
 from sklearn.decomposition import PCA
 from utils.kwd import *
 
-# swap np with cp
-USE_CUPY = True
-try:
-    import cupy as np
-except ImportError as e:
-    USE_CUPY = False
+# # swap np with cp
+# USE_CUPY = True
+# try:
+#     import cupy as np
+# except ImportError as e:
+#     USE_CUPY = False
 
 N_SAMPLES = 60
 FEATURES_N = 64

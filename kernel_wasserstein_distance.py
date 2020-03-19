@@ -37,12 +37,12 @@ if __name__ == "__main__":
 
         np.save(FEATURES_NP_FILE, features_nps)  # save it
 
-    # swap np with cp
-    USE_CUPY = True
-    try:
-        import cupy as np
-    except ImportError as e:
-        USE_CUPY = False
+    # # swap np with cp
+    # USE_CUPY = True
+    # try:
+    #     import cupy as np
+    # except ImportError as e:
+    #     USE_CUPY = False
 
     if PROCESS_DIMRED:  # process dimred
         # load
