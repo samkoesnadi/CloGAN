@@ -70,7 +70,7 @@ if __name__ == "__main__":
         for i in sample_numbers:
             for j in tqdm(range(TRAIN_N), desc="iter for TRAIN_N"):
                 if i == j: continue
-                welford_(kernel_wasserstein_distance(features_nps[i], features_nps[j]))
+                welford_(kernel_wasserstein_distance(features_nps[i], features_nps[j], USE_CUPY))
             t.set_postfix(i_=i, value=welford_)
             t.update()
 
