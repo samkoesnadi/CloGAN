@@ -3,25 +3,17 @@ from datasets.cheXpert_dataset import read_dataset
 from utils.visualization import *
 from models.multi_label import *
 from sklearn.decomposition import PCA
-from utils.kwd import *
+from utils.kwd import kernel_wasserstein_distance
 from scipy.stats import wasserstein_distance
 from scipy.spatial.distance import chebyshev
 from scipy.spatial.distance import cosine
 from scipy.spatial.distance import mahalanobis
-import numpy as np
 
 GENERATE_FEATURE = False
 PROCESS_DIMRED = False
 
 N_SAMPLES = 60
 FEATURES_N = 64
-
-# swap np with cp
-USE_CUPY = True
-try:
-    import cupy as np
-except ImportError as e:
-    USE_CUPY = False
 
 if __name__ == "__main__":
     test_dataset = read_dataset(
@@ -37,7 +29,7 @@ if __name__ == "__main__":
 
     _feature_nps_1 = np.zeros((_test_n, 2048))
     for i_test, (input, label) in tqdm(enumerate(test_dataset)):
-        _feature_nps_1[i_test * BATCH_SIZE : (i_test+1) * BATCH_SIZE] = np.array(model.predict(input)[1])
+        _feature_nps_1[i_test * BATCH_SIZE : (i_test+1) * BATCH_SIZE] = model.predict(input)[1]
 
     # now run chestxray14
     print("now run chestxray14")
@@ -45,7 +37,7 @@ if __name__ == "__main__":
 
     _feature_nps_2 = np.zeros((_test_n, 2048))
     for i_test, (input, label) in tqdm(enumerate(test_dataset)):
-        _feature_nps_2[i_test * BATCH_SIZE : (i_test+1) * BATCH_SIZE] = np.array(model.predict(input)[1])
+        _feature_nps_2[i_test * BATCH_SIZE : (i_test+1) * BATCH_SIZE] = model.predict(input)[1]
 
     # run the kwd
     welford_kwd = Welford()
