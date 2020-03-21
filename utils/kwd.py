@@ -1,4 +1,4 @@
-from common_definitions import *
+import numpy as np
 
 # swap np with cp
 USE_CUPY = True
@@ -31,7 +31,7 @@ def calc_k(x: np.ndarray, y: np.ndarray, gamma=None):
     return _sum
 
 
-def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray, use_cupy=False):
+def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray):
     # n & m
     n = u_values.size
     m = v_values.size
@@ -44,6 +44,6 @@ def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray, use_
           + np.trace(J_2 @ J_2.T @ calc_K(v_values, v_values)) \
           - 2 * np.trace(calc_K(u_values, v_values) @ J_2 @ J_2.T @ calc_K(v_values, u_values) @ J_1 @ J_1.T) ** .5
 
-    if use_cupy: np.cuda.Stream.null.synchronize()
+    if USE_CUPY: np.cuda.Stream.null.synchronize()
 
     return float(W_2)

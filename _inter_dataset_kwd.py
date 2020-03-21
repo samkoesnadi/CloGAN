@@ -33,7 +33,7 @@ if __name__ == "__main__":
         for i in sample_numbers:
             for j in tqdm(range(CHESTXRAY_TRAIN_N), desc="iter for TRAIN_N"):
                 if i == j: continue
-                welford_(kernel_wasserstein_distance(features_nps_1[i], features_nps_2[j], USE_CUPY))
+                welford_(kernel_wasserstein_distance(features_nps_1[i], features_nps_2[j]))
             t.set_postfix(i_=i, value=welford_)
             t.update()
 
