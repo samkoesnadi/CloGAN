@@ -32,6 +32,7 @@ DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
+USE_AUGMENTATION = True
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
 AUC_INTERP_TOGGLE = False  # activate AUC interp

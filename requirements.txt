@@ -10,3 +10,4 @@ tensorflow-gpu
 scikit-learn
 scikit-image
 pandas
+albumentations

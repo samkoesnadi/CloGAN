@@ -13,7 +13,7 @@ if __name__ == "__main__":
 	model = model_MC_SVM()
 
 	# get the dataset
-	train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH)
+	train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION)
 	val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH)
 	test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH)
 

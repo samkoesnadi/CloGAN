@@ -4,6 +4,18 @@ from common_definitions import *
 from tqdm import tqdm
 import skimage.io
 import skimage.transform
+import albumentations
+import albumentations.augmentations.transforms
+
+def _aug(p=0.9):
+	return albumentations.Compose([
+		albumentations.augmentations.transforms.HorizontalFlip(),
+		albumentations.augmentations.transforms.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.02, rotate_limit=7, border_mode=0),
+		albumentations.imgaug.transforms.IAAAffine(shear=5,mode="constant"),
+		albumentations.augmentations.transforms.RandomBrightnessContrast(),
+		albumentations.augmentations.transforms.GaussianBlur(),
+		albumentations.augmentations.transforms.GaussNoise(),
+	], p=p)
 
 def statisticsCheXpert(labels, num_class=14, labels_key=LABELS_KEY):
 	totals = np.zeros((num_class,2))
@@ -71,12 +83,20 @@ def calculate_K_SN(train_dataset):
 		n_mask += 1.
 	return sum_norm / (n_mask * BATCH_SIZE)
 
-def load_image(img_path):
+def load_image(img_path, augmentation=None):
 	# load image
 	img = tf.io.read_file(img_path)
 	img = tf.image.decode_jpeg(img, channels=1)  # output grayscale image
 	img = tf.image.resize(img, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
-	img /= 255.
+	img /= 255.  # convert the range to 0~1
+
+	if augmentation is not None:
+		img_dtype = img.dtype
+		img_shape = tf.shape(img)
+		image = tf.numpy_function(lambda x: augmentation(image=x)["image"],
+		                          [img],
+		                          img_dtype)  # augment the image
+		img = tf.reshape(image, shape=img_shape)
 
 	# sparsity normalization
 	img = sparsity_norm(img) if USE_SPARSITY_NORM and K_SN != 1. else img
@@ -149,7 +169,7 @@ def read_TFRecord(filename, num_class=14):
 
 	return parsed_dataset
 
-def read_dataset(filename, dataset_path, image_only=True, num_class=14, evaluation_mode=False, shuffle=True):
+def read_dataset(filename, dataset_path, use_augmentation=False, image_only=True, num_class=14, evaluation_mode=False, shuffle=True):
 	if evaluation_mode:
 		dataset = read_TFRecord(filename, num_class)
 		dataset = dataset.map(lambda data: (
@@ -159,9 +179,18 @@ def read_dataset(filename, dataset_path, image_only=True, num_class=14, evaluati
 							  num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
 	else:
 		dataset = read_TFRecord(filename, num_class)
-		dataset = dataset.map(lambda data: (
-		load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"], data["label"]),
-							  num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
+
+		if use_augmentation:
+			_augmentation = _aug(0.9)
+			dataset = dataset.map(lambda data: (
+				load_image(tf.strings.join([dataset_path, '/', data["image_path"]]), augmentation=_augmentation), data["patient_data"],
+				data["label"]),
+								  num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
+		else:
+			dataset = dataset.map(lambda data: (
+				load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"],
+				data["label"]),
+								  num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
 		dataset = dataset.map(lambda image, _, label: (image, label), num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
 	dataset = dataset.shuffle(BUFFER_SIZE) if shuffle else dataset
 	dataset = dataset.batch(BATCH_SIZE)  # shuffle and batch with length of padding according to the the batch
@@ -186,3 +215,15 @@ def read_dataset_multi_class(filename, dataset_path, image_only=True, num_class=
 	dataset = dataset.shuffle(BUFFER_SIZE).batch(BATCH_SIZE)  # shuffle and batch with length of padding according to the the batch
 
 	return dataset
+
+
+if __name__ == "__main__":
+	from skimage import io
+
+	img = io.imread('../sample/00002032_006.png', as_gray=True)
+	augmentations = _aug(0.9)
+	b = plt.imshow(img)
+
+	plt.show()
+	a = plt.imshow(augmentations(image=img)["image"])
+	plt.show()
