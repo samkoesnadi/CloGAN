@@ -196,7 +196,7 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
 
             for f in augmentations:
                 dataset = dataset.map(lambda x, patient_data, label: (
-                    tf.cond(tf.random.uniform([], 0, 1) > 0.25, lambda: f(x), lambda: x), patient_data, label),
+                    tf.cond(tf.random.uniform([], 0, 1) > 0.75, lambda: f(x), lambda: x), patient_data, label),
                                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         dataset = dataset.map(
