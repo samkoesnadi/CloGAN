@@ -25,9 +25,8 @@ def color(x: tf.Tensor) -> tf.Tensor:
     Returns:
         Augmented image
     """
-    x = tf.image.random_saturation(x, 0.6, 1.6)
     x = tf.image.random_brightness(x, 0.05)
-    x = tf.image.random_contrast(x, 0.7, 1.3)
+    x = tf.image.random_contrast(x, 0.8, 1.2)
     return x
 
 def rotate(x: tf.Tensor) -> tf.Tensor:
@@ -77,7 +76,7 @@ def jpeq_quality(x):
     return tf.image.random_jpeg_quality(x, 90, 100)
 
 def gauss_noise(x):
-    return x + tf.random.normal(x.shape, stddev=tf.random.uniform([], minval=0, maxval=0.1))
+    return x + tf.random.normal((IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3), stddev=tf.random.uniform([], minval=0, maxval=0.05))
 
 def _gaussian_kernel(kernel_size, sigma, n_channels, dtype):
     x = tf.range(-kernel_size // 2 + 1, kernel_size // 2 + 1, dtype=dtype)
@@ -87,6 +86,6 @@ def _gaussian_kernel(kernel_size, sigma, n_channels, dtype):
     g_kernel = tf.expand_dims(g_kernel, axis=-1)
     return tf.expand_dims(tf.tile(g_kernel, (1, 1, n_channels)), axis=-1)
 
-blur = _gaussian_kernel(3, 2, 3, tf.float32)
+blur = _gaussian_kernel(3, tf.random.uniform([], 2, 10), 3, tf.float32)
 def apply_blur(img):
-    return tf.cond(tf.random.uniform(shape=[], minval=0., maxval=1., dtype=tf.float32) < 0.5, lambda: img, lambda: tf.nn.depthwise_conv2d(img[None], blur, [1,1,1,1], 'SAME')[0])
+    return tf.nn.depthwise_conv2d(img[None], blur, [1,1,1,1], 'SAME')[0]

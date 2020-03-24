@@ -79,6 +79,7 @@ def calculate_K_SN(train_dataset):
         n_mask += 1.
     return sum_norm / (n_mask * BATCH_SIZE)
 
+
 def load_image(img_path):
     # load image
     img = tf.io.read_file(img_path)
@@ -161,36 +162,54 @@ def read_TFRecord(filename, num_class=14):
 
     return parsed_dataset
 
-def read_dataset(filename, dataset_path, use_augmentation=False, image_only=True, num_class=14, evaluation_mode=False,
+
+def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_data=True, image_only=True, num_class=14,
+                 evaluation_mode=False,
                  shuffle=True):
+    dataset = read_TFRecord(filename, num_class)
+
+    dataset = dataset.map(lambda data: (
+        load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"],
+        data["label"]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
     if evaluation_mode:
-        dataset = read_TFRecord(filename, num_class)
-        dataset = dataset.map(lambda data: (
-            load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"],
-            data["label"]), num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
-        dataset = dataset.map(lambda image, _, label: (image, tf.gather(label, tf.constant(EVAL_FIVE_CATS_INDEX))),
+        dataset = dataset.map(lambda image, patient_data, label: (image, patient_data, tf.gather(label, tf.constant(EVAL_FIVE_CATS_INDEX))),
                               num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
     else:
-        dataset = read_TFRecord(filename, num_class)
-
-        dataset = dataset.map(lambda data: (
-            load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"],
-            data["label"]), num_parallel_calls=tf.data.experimental.AUTOTUNE).cache()  # load the image
+        dataset = dataset.cache()  # load the image
 
         if use_augmentation:
             # Add augmentations
-            augmentations = [flip, color, zoom, jpeq_quality, apply_blur]
+            augmentations = [color, jpeq_quality, apply_blur, gauss_noise]
+
+            datagen = tf.keras.preprocessing.image.ImageDataGenerator(
+                rotation_range=7,
+                width_shift_range=0.1,
+                height_shift_range=0.1,
+                shear_range=5.,
+                zoom_range=0.1,
+                horizontal_flip=True,
+            )
+
+            dataset = dataset.map(lambda x, patient_data, label: (tf.reshape(tf.numpy_function(func=datagen.random_transform, inp=[x], Tout=[tf.float32])[0], (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3)), patient_data, label),
+                                  num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
             for f in augmentations:
-                dataset = dataset.map(lambda x, patient_data, label: (tf.cond(tf.random.uniform([], 0, 1) > 0.75, lambda: f(x), lambda: x), patient_data, label),
+                dataset = dataset.map(lambda x, patient_data, label: (
+                    tf.cond(tf.random.uniform([], 0, 1) > 0.25, lambda: f(x), lambda: x), patient_data, label),
                                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         dataset = dataset.map(
             lambda x, patient_data, label: (tf.image.rgb_to_grayscale(tf.clip_by_value(x, 0, 1)), patient_data, label),
             num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
+    if use_patient_data:
+        dataset = dataset.map(lambda image, patient_data, label: ({"input_img": image, "input_semantic":patient_data}, label),
+                              num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
+    else:
         dataset = dataset.map(lambda image, _, label: (image, label),
                               num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
+
     dataset = dataset.shuffle(BUFFER_SIZE) if shuffle else dataset
     dataset = dataset.batch(BATCH_SIZE)  # shuffle and batch with length of padding according to the the batch
 
@@ -215,7 +234,8 @@ def mapping(label):
 def read_dataset_multi_class(filename, dataset_path, image_only=True, num_class=14):
     dataset = read_TFRecord(filename, num_class)
     dataset = dataset.map(lambda data: (
-        load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"], mapping(data["label"])),
+        load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"],
+        mapping(data["label"])),
                           num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
     dataset = dataset.map(lambda image, _, label: (image, label),
                           num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
@@ -229,6 +249,6 @@ if __name__ == "__main__":
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION)
 
     for _train in train_dataset.take(32):
-        print(_train[0].shape)
-        plt.imshow(np.squeeze(_train[0][0]))
+        print(_train[0]["input_img"][0])
+        plt.imshow(np.squeeze(_train[0]["input_img"][0]))
         plt.show()
