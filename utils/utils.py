@@ -2,7 +2,7 @@ import os
 import glob
 import re
 import numpy as np
-from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NUM_CLASSES
+from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NUM_CLASSES, CLR_MAXLR, CLR_BASELR, CLR_PATIENCE
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
 
@@ -140,6 +140,14 @@ def get_square_hinge_weighted_loss(weights):
 		return tf.keras.backend.mean((weights[:,0]**(1-y_true))*(weights[:,1]**y_true)*squared_hinge(y_true, y_pred, reduction_bool=False), axis=-1)
 	return weighted_loss
 
+import math
+# learning rate schedule
+def step_decay(epoch):
+	initial_lrate = CLR_MAXLR
+	drop = 0.5
+	epochs_drop = CLR_PATIENCE
+	lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
+	return lrate
 
 if __name__ == "__main__":
 	# img = read_image_and_preprocess("../sample/00002032_012.png")

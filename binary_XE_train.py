@@ -25,9 +25,6 @@ if __name__ == "__main__":
 	_optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
 	_metrics = {"predictions" : [f1, tf.keras.metrics.AUC()]}  # give recall for metric it is more accurate
 
-	clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
-				   step_size=CLR_PATIENCE*ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
-
 	model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
 	                                               monitor="val_auc",
 	                                               verbose=1,
@@ -94,8 +91,10 @@ if __name__ == "__main__":
 
 	# Define the per-epoch callback.
 	cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
+	lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
 
-	_callbacks = [clr, model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
+
+	_callbacks = [lrate, model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
 
 	# start training
 	model.fit(train_dataset,
