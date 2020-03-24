@@ -10,12 +10,12 @@ import skimage.color
 from utils.cylical_learning_rate import CyclicLR
 
 if __name__ == "__main__":
-	model = model_binaryXE()
+	model = model_binaryXE(USE_PATIENT_DATA)
 
 	# get the dataset
-	train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION)
-	val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH)
-	test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH)
+	train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION, use_patient_data=USE_PATIENT_DATA)
+	val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA)
+	test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA)
 
 	if USE_CLASS_WEIGHT:
 		_loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)

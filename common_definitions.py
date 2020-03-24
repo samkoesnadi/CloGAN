@@ -33,9 +33,14 @@ KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
 USE_AUGMENTATION = True
+AUC_INTERP_TOGGLE = False  # activate AUC interp
+
+# network model related variable
+USE_PATIENT_DATA = True
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
-AUC_INTERP_TOGGLE = False  # activate AUC interp
+
+
 
 # evaluation matter
 TRAIN_FIVE_CATS_INDEX = [2, 5, 6, 8, 10] if TRAIN_CHEXPERT else [1, 9, 8, 0, 2]
