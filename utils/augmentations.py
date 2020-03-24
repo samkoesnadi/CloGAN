@@ -76,11 +76,8 @@ def zoom(x: tf.Tensor) -> tf.Tensor:
 def jpeq_quality(x):
     return tf.image.random_jpeg_quality(x, 90, 100)
 
-GN = tf.keras.layers.GaussianNoise(7.)
 def gauss_noise(x):
-    choice = tf.random.uniform(shape=[], minval=0., maxval=1., dtype=tf.float32)
-
-    return tf.cond(choice < 0.5, lambda: x, lambda: GN(x))
+    return x + tf.random.normal(x.shape, stddev=tf.random.uniform([], minval=0, maxval=0.1))
 
 def _gaussian_kernel(kernel_size, sigma, n_channels, dtype):
     x = tf.range(-kernel_size // 2 + 1, kernel_size // 2 + 1, dtype=dtype)
