@@ -163,7 +163,7 @@ def read_TFRecord(filename, num_class=14):
     return parsed_dataset
 
 
-def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_data=True, image_only=True, num_class=14,
+def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_data=False, image_only=True, num_class=14,
                  evaluation_mode=False,
                  shuffle=True):
     dataset = read_TFRecord(filename, num_class)
@@ -197,9 +197,9 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                     tf.cond(tf.random.uniform([], 0, 1) > 0.75, lambda: f(x), lambda: x), patient_data, label),
                                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-        dataset = dataset.map(
-            lambda x, patient_data, label: (tf.image.rgb_to_grayscale(tf.clip_by_value(x, 0, 1)), patient_data, label),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(
+        lambda x, patient_data, label: (tf.image.rgb_to_grayscale(tf.clip_by_value(x, 0, 1)), patient_data, label),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if use_patient_data:
         dataset = dataset.map(lambda image, patient_data, label: ({"input_img": image, "input_semantic":patient_data}, label),

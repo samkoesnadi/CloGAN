@@ -33,7 +33,7 @@ KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
 USE_AUGMENTATION = True
-USE_CLR = False
+USE_CLR = True
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # network model related variable
@@ -57,7 +57,7 @@ INTERP_NUM_STEPS = 10000
 # for training
 BUFFER_SIZE = 1600
 BATCH_SIZE = 32
-MAX_EPOCHS = 20
+MAX_EPOCHS = 50
 LEARNING_RATE = 1e-4
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
