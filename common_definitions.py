@@ -1,12 +1,12 @@
 # common imports
 import tensorflow as tf
 
-# physical_devices = tf.config.list_physical_devices('GPU')
-# try:
-#   tf.config.experimental.set_memory_growth(physical_devices[0], True)
-# except:
-#   # Invalid device or cannot modify virtual devices once initialized.
-#   pass
+physical_devices = tf.config.list_physical_devices('GPU')
+try:
+  tf.config.experimental.set_memory_growth(physical_devices[0], True)
+except:
+  # Invalid device or cannot modify virtual devices once initialized.
+  pass
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -75,6 +75,7 @@ SAVED_MODEL_PATH = './weights/model.h5'
 # for validation
 THRESHOLD_SIGMOID = 0.5
 SAMPLE_FILENAME = "./sample/00002032_012.png"
+SAMPLE_PATIENT_DATA = [0.5, 55/100, 0, 0.5]
 
 # for evaluation
 ROC_RESULTS_PATH = "./report/results/ROC_%s.png"

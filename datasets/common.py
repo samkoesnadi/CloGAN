@@ -170,14 +170,12 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
 
     dataset = dataset.map(lambda data: (
         load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"],
-        data["label"]), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        data["label"]), num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
 
     if evaluation_mode:
         dataset = dataset.map(lambda image, patient_data, label: (image, patient_data, tf.gather(label, tf.constant(EVAL_FIVE_CATS_INDEX))),
                               num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
     else:
-        dataset = dataset.cache()  # load the image
-
         if use_augmentation:
             # Add augmentations
             augmentations = [color, jpeq_quality, apply_blur, gauss_noise]
