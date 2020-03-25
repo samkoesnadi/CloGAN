@@ -33,7 +33,7 @@ KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
 USE_AUGMENTATION = True
-USE_CLR = True
+USE_CLR = False
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # network model related variable
