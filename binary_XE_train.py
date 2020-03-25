@@ -18,6 +18,9 @@ if __name__ == "__main__":
     val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA)
     test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA)
 
+    clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
+                   step_size=CLR_PATIENCE * ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
+
     if USE_CLASS_WEIGHT:
         _loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
     else:
@@ -60,8 +63,9 @@ if __name__ == "__main__":
 
         image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
+        patient_data = np.array([SAMPLE_PATIENT_DATA])
         if USE_PATIENT_DATA:
-            prediction = model.predict({"input_img": image, "input_semantic": np.array([SAMPLE_PATIENT_DATA])})[0]
+            prediction = model.predict({"input_img": image, "input_semantic": patient_data})[0]
         else:
             prediction = model.predict(image)[0]
 
@@ -69,7 +73,7 @@ if __name__ == "__main__":
 
         lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
-        gradcampps = Xception_gradcampp(model, image)
+        gradcampps = Xception_gradcampp(model, image, patient_data=patient_data)
 
         results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
@@ -98,12 +102,11 @@ if __name__ == "__main__":
     cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
     lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
 
-    _callbacks = [lrate, model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
+    _callbacks = [clr if USE_CLR else lrate, model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
 
     # start training
     model.fit(train_dataset,
               epochs=MAX_EPOCHS,
-              steps_per_epoch=1,
               validation_data=val_dataset,
               initial_epoch=init_epoch,
               callbacks=_callbacks,

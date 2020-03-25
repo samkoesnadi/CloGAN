@@ -19,7 +19,7 @@ def convert_to_RGB(dz):
     colors = plt.cm.jet(norm(dz))
     return skimage.color.rgba2rgb(colors)
 
-def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=True):
+def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=True, patient_data=None):
     cams = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
 
     for i in tqdm(range(NUM_CLASSES), desc="Generate tensorboard's IMAGE"):
@@ -35,8 +35,8 @@ def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=T
         second = tf.math.exp(y_c)*grads*grads
         third = tf.math.exp(y_c)*grads*grads*grads
 
-        gradient_function = K.function([input_model.input], [y_c,first,second,third, conv_output, grads])
-        y_c, conv_first_grad, conv_second_grad,conv_third_grad, conv_output, grads_val = gradient_function([img])
+        gradient_function = K.function([input_model.input] if not USE_PATIENT_DATA else input_model.inputs, [y_c,first,second,third, conv_output, grads])
+        y_c, conv_first_grad, conv_second_grad,conv_third_grad, conv_output, grads_val = gradient_function([img] if not USE_PATIENT_DATA else {"input_img": img, "input_semantic":patient_data})
         global_sum = np.sum(conv_output[0].reshape((-1,conv_first_grad[0].shape[2])), axis=0)
 
         alpha_num = conv_second_grad[0]
@@ -200,8 +200,8 @@ def plot_roc(labels, predictions, compare_interp=True):
     return list(map(float, roc_auc.values()))[:-2]
 
 
-def Xception_gradcampp(model, img, use_svm=False, use_multi_class=False):
-    return grad_cam_plus(model, img, 'block14_sepconv2_act', use_svm, use_multi_class)
+def Xception_gradcampp(model, img, use_svm=False, use_multi_class=False, patient_data=None):
+    return grad_cam_plus(model, img, 'block14_sepconv2_act', use_svm, use_multi_class, patient_data=patient_data)
 
 
 if __name__ == "__main__":

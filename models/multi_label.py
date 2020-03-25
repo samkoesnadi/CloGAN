@@ -15,7 +15,7 @@ def raw_model_binaryXE(use_patient_data=False):
 		image_section_1536 = image_section_model.layers[128].output
 		image_section_2000 = tf.keras.layers.SeparableConv2D(2000, (3,3), padding="same")(image_section_1536)
 		image_section_2000 = tf.keras.layers.BatchNormalization()(image_section_2000)
-		image_section_2000 = tf.keras.layers.LeakyReLU()(image_section_2000)
+		image_section_2000 = tf.keras.layers.LeakyReLU(name="block14_sepconv2_act")(image_section_2000)
 		image_section_layer_feature = tf.keras.layers.GlobalAveragePooling2D()(image_section_2000)
 		feature_vectors = tf.keras.layers.Concatenate()([image_section_layer_feature, int_semantic])
 	else:
