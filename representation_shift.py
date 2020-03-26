@@ -9,8 +9,8 @@ from scipy.spatial.distance import chebyshev
 from scipy.spatial.distance import cosine
 from scipy.spatial.distance import mahalanobis
 
-GENERATE_FEATURE = False
-PROCESS_DIMRED = False
+GENERATE_FEATURE = True
+PROCESS_DIMRED = True
 
 N_SAMPLES = 60
 FEATURES_N = 64
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # run chexpert first
     print("run chexpert first")
     model = model_binaryXE_mid()
-    model.load_weights("networks/chexpert.hdf5")
+    model.load_weights(MODEL_CHEXPERT_PATH)
 
     _feature_nps_1 = np.zeros((_test_n, 2048))
     for i_test, (input, label) in tqdm(enumerate(test_dataset)):
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     # now run chestxray14
     print("now run chestxray14")
-    model.load_weights("networks/chestxray14.hdf5")
+    model.load_weights(MODEL_CHESTXRAY_PATH)
 
     _feature_nps_2 = np.zeros((_test_n, 2048))
     for i_test, (input, label) in tqdm(enumerate(test_dataset)):

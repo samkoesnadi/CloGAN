@@ -6,9 +6,13 @@ from datasets.cheXpert_dataset import read_dataset
 from utils.utils import *
 from utils.visualization import *
 from models.multi_label import *
+from models.multi_class import *
 
 if __name__ == "__main__":
-	model = model_binaryXE(use_patient_data=USE_PATIENT_DATA)
+	if USE_SVM:
+		model = model_MC_SVM()
+	else:
+		model = model_binaryXE(use_patient_data=USE_PATIENT_DATA)
 
 	if LOAD_WEIGHT_BOOL:
 		target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
@@ -40,5 +44,4 @@ if __name__ == "__main__":
 
 	roc_auc = plot_roc(test_label_nps, results, True)
 
-	# print('test auc:', (_metrics["predictions"][1](test_label_nps, results).numpy()))
 	print("test auc:", roc_auc, ", auc macro:", sum(roc_auc)/len(roc_auc))

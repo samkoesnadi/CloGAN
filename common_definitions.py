@@ -30,22 +30,26 @@ NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.25
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
-USE_CLASS_WEIGHT = False
-USE_SPARSITY_NORM = True
-USE_AUGMENTATION = True
-USE_CLR = True
-AUC_INTERP_TOGGLE = False  # activate AUC interp
+
 
 # network model related variable
 USE_SVM = False
 USE_PATIENT_DATA = True
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
-EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
 
+# train settings
+USE_CLASS_WEIGHT = False
+USE_SPARSITY_NORM = True
+USE_AUGMENTATION = True
+USE_CLR = True
+
+# eval settings
+EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
+AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # for manifold learning
 MODEL_SVM_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200126-034328/checkpoints/model_weights.04-0.86.hdf5"
-MODEL_CHEXPERT_PATH = "networks/chexpert.hdf5"
+MODEL_CHEXPERT_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200325-191150/checkpoints/model_weights.16-0.87.hdf5"
 MODEL_CHESTXRAY_PATH = "networks/chestxray14.hdf5"
 
 
@@ -112,7 +116,6 @@ CHESTXRAY_DATASET_PATH = "../datasets/chestXray14/images"
 CHESTXRAY_TRAIN_N = 77872
 CHESTXRAY_VAL_N = 8652
 CHESTXRAY_TEST_N = 25596
-# CHESTXRAY_TEST_N = 234
 
 CHESTXRAY_LABELS_KEY = ["Atelectasis", "Cardiomegaly", "Effusion", "Infiltration", "Mass", "Nodule", "Pneumonia", "Pneumothorax", "Consolidation", "Edema", "Emphysema", "Fibrosis", "Pleural_Thickening", "Hernia"]
 
@@ -125,7 +128,6 @@ if TRAIN_CHEXPERT:
 	DATASET_PATH = CHEXPERT_DATASET_PATH
 	TRAIN_N = CHEXPERT_TRAIN_N
 	VAL_N = CHEXPERT_VAL_N
-	TEST_N = CHEXPERT_TEST_N
 	LABELS_KEY = CHEXPERT_LABELS_KEY
 else:
 	TRAIN_TARGET_TFRECORD_PATH = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
@@ -134,8 +136,12 @@ else:
 	DATASET_PATH = CHESTXRAY_DATASET_PATH
 	TRAIN_N = CHESTXRAY_TRAIN_N
 	VAL_N = CHESTXRAY_VAL_N
-	TEST_N = CHESTXRAY_TEST_N
 	LABELS_KEY = CHESTXRAY_LABELS_KEY
+
+if EVAL_CHEXPERT:
+	TEST_N = CHEXPERT_TEST_N
+else:
+	TEST_N = CHESTXRAY_TEST_N
 
 
 	# statistics training
