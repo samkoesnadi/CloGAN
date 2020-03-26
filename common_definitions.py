@@ -50,7 +50,7 @@ AUC_INTERP_TOGGLE = False  # activate AUC interp
 # for manifold learning
 MODEL_SVM_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200126-034328/checkpoints/model_weights.04-0.86.hdf5"
 MODEL_CHEXPERT_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200325-191150/checkpoints/model_weights.16-0.87.hdf5"
-MODEL_CHESTXRAY_PATH = "networks/chestxray14.hdf5"
+MODEL_CHESTXRAY_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200326-092905/checkpoints/model_weights.04-0.86.hdf5"
 
 
 # evaluation matter

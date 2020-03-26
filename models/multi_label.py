@@ -39,11 +39,11 @@ def model_binaryXE(use_patient_data=False):
 
 def model_binaryXE_mid(use_patient_data=False):
 	if use_patient_data:
-		input_layer, input_semantic, output_layer, image_section_layer_feature = raw_model_binaryXE()
+		input_layer, input_semantic, output_layer, image_section_layer_feature = raw_model_binaryXE(use_patient_data)
 
 		model = tf.keras.Model(inputs=[input_layer, input_semantic], outputs=[output_layer, image_section_layer_feature])
 	else:
-		input_layer, output_layer, image_section_layer_feature = raw_model_binaryXE()
+		input_layer, output_layer, image_section_layer_feature = raw_model_binaryXE(use_patient_data)
 
 		model = tf.keras.Model(inputs=input_layer, outputs=[output_layer, image_section_layer_feature])
 	return model

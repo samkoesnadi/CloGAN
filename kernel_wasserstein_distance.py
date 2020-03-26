@@ -15,7 +15,7 @@ FEATURES_N = 64
 if __name__ == "__main__":
     if GENERATE_FEATURE:
         if not USE_SVM:
-            model = model_binaryXE_mid()
+            model = model_binaryXE_mid(use_patient_data=USE_PATIENT_DATA)
             model.load_weights(MODEL_CHEXPERT_PATH if EVAL_CHEXPERT else MODEL_CHESTXRAY_PATH)
         else:
             model = model_MC_SVM(with_feature=True)
@@ -24,7 +24,8 @@ if __name__ == "__main__":
         # get the dataset
         test_dataset = read_dataset(
             CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
-            CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, shuffle=False)
+            CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, shuffle=False,
+            use_patient_data=USE_PATIENT_DATA)
 
         _test_n = TEST_N
 
