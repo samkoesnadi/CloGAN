@@ -37,10 +37,16 @@ USE_CLR = True
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # network model related variable
+USE_SVM = False
 USE_PATIENT_DATA = True
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
 
+
+# for manifold learning
+MODEL_SVM_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200126-034328/checkpoints/model_weights.04-0.86.hdf5"
+MODEL_CHEXPERT_PATH = "networks/chexpert.hdf5"
+MODEL_CHESTXRAY_PATH = "networks/chestxray14.hdf5"
 
 
 # evaluation matter

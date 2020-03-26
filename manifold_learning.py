@@ -4,15 +4,19 @@ import time
 from utils.visualization import *
 from datasets.cheXpert_dataset import read_dataset
 from models.multi_label import model_binaryXE_mid
-
+from models.multi_class import model_MC_SVM
 
 def _np_to_binary(np_array):
     return int("".join(str(int(x)) for x in np_array), 2)
 
 
 if __name__ == "__main__":
-    model = model_binaryXE_mid()
-    model.load_weights("networks/chexpert.hdf5" if TRAIN_CHEXPERT else "networks/chestxray14.hdf5")
+    if USE_SVM:
+        model = model_MC_SVM(with_feature=True)
+        model.load_weights(MODEL_SVM_PATH)
+    else:
+        model = model_binaryXE_mid()
+        model.load_weights(MODEL_CHEXPERT_PATH if TRAIN_CHEXPERT else MODEL_CHESTXRAY_PATH)
 
     test_dataset = read_dataset(
         CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
@@ -53,4 +57,5 @@ if __name__ == "__main__":
     plt.colorbar(_scatter_plt)
     plt.axis('tight')
 
+    get_and_mkdir("report/results/manifold_learning.png")
     plt.savefig("report/results/manifold_learning.png", bbox_inches="tight")

@@ -144,7 +144,7 @@ import math
 # learning rate schedule
 def step_decay(epoch):
 	initial_lrate = CLR_MAXLR
-	drop = 0.5
+	drop = 0.6
 	epochs_drop = CLR_PATIENCE
 	lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
 	return lrate

@@ -11,7 +11,7 @@ import skimage.color
 
 
 target_filename = "./sample/00002032_006.png"
-#target_filename = "~/Downloads/pneumonia3.jpg"
+target_filename = "~/Downloads/pneumonia3.jpg"
 if __name__ == "__main__":
 	# if LOAD_WEIGHT_BOOL:
 	# 	model = tf.keras.models.load_model(SAVED_MODEL_PATH, custom_objects={'weighted_loss': get_weighted_loss(CHEXPERT_CLASS_WEIGHT), 'f1': f1})
