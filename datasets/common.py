@@ -50,10 +50,10 @@ def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
-def sparsity_norm(a):
+def sparsity_norm(a, k_sn=K_SN):
     mask = tf.where(a > 0., 1., 0.)
     norm_m = tf.reduce_sum(mask)
-    return K_SN * a / norm_m
+    return k_sn * a / norm_m
 
 
 def seperate_train_valid(paths, patient_datas, labels, total_row):
@@ -91,7 +91,6 @@ def load_image(img_path):
     img = sparsity_norm(img) if USE_SPARSITY_NORM and K_SN != 1. else img
 
     return img
-
 
 def read_image_and_preprocess(filename, use_sn=False):
     img = skimage.io.imread(filename, True)
@@ -165,7 +164,9 @@ def read_TFRecord(filename, num_class=14):
 
 def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_data=False, image_only=True, num_class=14,
                  evaluation_mode=False,
-                 shuffle=True):
+                 shuffle=True,
+                 batch_size=BATCH_SIZE,
+                 buffer_size=BUFFER_SIZE):
     dataset = read_TFRecord(filename, num_class)
 
     dataset = dataset.map(lambda data: (
@@ -202,14 +203,15 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if use_patient_data:
-        dataset = dataset.map(lambda image, patient_data, label: ({"input_img": image, "input_semantic":patient_data}, label),
-                              num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
+        dataset = dataset.map(lambda image, patient_data, label: ({"input_img": image, "input_semantic":(sparsity_norm(patient_data, k_sn=3.7) if USE_SPARSITY_NORM else
+                                                                  patient_data)}, label),
+                              num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data, value 3.7 is chosen because there are 4 patient data
     else:
         dataset = dataset.map(lambda image, _, label: (image, label),
                               num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
 
-    dataset = dataset.shuffle(BUFFER_SIZE) if shuffle else dataset
-    dataset = dataset.batch(BATCH_SIZE)  # shuffle and batch with length of padding according to the the batch
+    dataset = dataset.shuffle(buffer_size) if shuffle else dataset
+    dataset = dataset.batch(batch_size)  # shuffle and batch with length of padding according to the the batch
 
     # optimizer performance
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)

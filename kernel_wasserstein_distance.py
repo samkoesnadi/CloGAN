@@ -46,7 +46,7 @@ if __name__ == "__main__":
         print("### Running PCA... ###")
         _pca = PCA(n_components=FEATURES_N)
 
-        features_nps = _pca.fit_transform(features_nps)
+        features_nps = _pca.fit_transform()
         np.save(FEATURES_NP_FILE + "_dimred", features_nps)
     else:
         features_nps = np.load(FEATURES_NP_FILE + "_dimred.npy")

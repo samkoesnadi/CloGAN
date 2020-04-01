@@ -35,6 +35,7 @@ KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 # network model related variable
 USE_SVM = False
 USE_PATIENT_DATA = True
+USE_PATIENT_DATA_OPT_LAYER = True
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 
 # train settings
@@ -42,6 +43,7 @@ USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
 USE_AUGMENTATION = True
 USE_CLR = True
+USE_DROPOUT_PAT_DATA = True
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
@@ -49,7 +51,7 @@ AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # for manifold learning
 MODEL_SVM_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200126-034328/checkpoints/model_weights.04-0.86.hdf5"
-MODEL_CHEXPERT_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200325-191150/checkpoints/model_weights.16-0.87.hdf5"
+MODEL_CHEXPERT_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200326-093110/checkpoints/model_weights.04-0.87.hdf5"
 MODEL_CHESTXRAY_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200326-092905/checkpoints/model_weights.04-0.86.hdf5"
 
 
@@ -67,7 +69,7 @@ INTERP_NUM_STEPS = 10000
 # for training
 BUFFER_SIZE = 1600
 BATCH_SIZE = 32
-MAX_EPOCHS = 50
+MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")

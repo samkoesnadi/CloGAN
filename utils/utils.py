@@ -149,6 +149,9 @@ def step_decay(epoch):
 	lrate = initial_lrate * math.pow(drop, math.floor((1+epoch)/epochs_drop))
 	return lrate
 
+def _np_to_binary(np_array):
+	return int("".join(str(int(x)) for x in np_array), 2)
+
 if __name__ == "__main__":
 	# img = read_image_and_preprocess("../sample/00002032_012.png")
 	a = np.random.randint(0, 2, size=10)

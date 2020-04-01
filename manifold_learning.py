@@ -5,22 +5,19 @@ from utils.visualization import *
 from datasets.cheXpert_dataset import read_dataset
 from models.multi_label import model_binaryXE_mid
 from models.multi_class import model_MC_SVM
-
-def _np_to_binary(np_array):
-    return int("".join(str(int(x)) for x in np_array), 2)
-
+from utils.utils import _np_to_binary
 
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM(with_feature=True)
         model.load_weights(MODEL_SVM_PATH)
     else:
-        model = model_binaryXE_mid()
+        model = model_binaryXE_mid(use_patient_data=USE_PATIENT_DATA)
         model.load_weights(MODEL_CHEXPERT_PATH if TRAIN_CHEXPERT else MODEL_CHESTXRAY_PATH)
 
     test_dataset = read_dataset(
         CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
-        CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, evaluation_mode=True)
+        CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, evaluation_mode=True, use_patient_data=USE_PATIENT_DATA)
 
     _test_n = CHEXPERT_TEST_N if EVAL_CHEXPERT else CHESTXRAY_TEST_N
 

@@ -8,6 +8,8 @@ if USE_CUPY:
         import cupy as cp
     except ImportError as e:
         USE_CUPY = False
+else:
+    cp = np
 
 def calc_J(n):
     arrow_1 = cp.ones(n)
@@ -27,8 +29,8 @@ def calc_k(x: cp.ndarray, y: cp.ndarray, gamma=None):
     if gamma is None:
         gamma = 1.0
 
-    x = cp.repeat(x.T[:, cp.newaxis], y_num_features, 1)
-    y = cp.repeat(y[cp.newaxis, :], x_num_features, 0)
+    x = cp.repeat(x.T[..., cp.newaxis], y_num_features, 1)
+    y = cp.repeat(y[..., cp.newaxis, :], x_num_features, 0)
     _sum = cp.exp(-gamma * (x - y) ** 2).sum()
     return _sum
 
@@ -53,3 +55,8 @@ def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray):
     if USE_CUPY: cp.cuda.Stream.null.synchronize()
 
     return float(W_2)
+
+if __name__ == "__main__":
+    a = cp.random.normal(0, 1, 2048)
+    b = cp.random.normal(10, 1., 2048)
+    print(kernel_wasserstein_distance(a, b))
