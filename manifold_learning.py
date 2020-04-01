@@ -10,10 +10,15 @@ from utils.utils import _np_to_binary
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM(with_feature=True)
-        model.load_weights(MODEL_SVM_PATH)
     else:
         model = model_binaryXE_mid(use_patient_data=USE_PATIENT_DATA)
-        model.load_weights(MODEL_CHEXPERT_PATH if TRAIN_CHEXPERT else MODEL_CHESTXRAY_PATH)
+
+    if LOAD_WEIGHT_BOOL:
+        target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
+        if target_model_weight:  # if weight is Found
+            model.load_weights(target_model_weight)
+        else:
+            print("[Load weight] No weight is found")
 
     test_dataset = read_dataset(
         CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,

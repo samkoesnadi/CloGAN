@@ -28,14 +28,14 @@ np.random.seed(0)
 IMAGE_INPUT_SIZE = 224  # this is because of Xception
 NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
-DROPOUT_N = 0.25
+DROPOUT_N = 0.5
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 
 
 # network model related variable
 USE_SVM = False
 USE_PATIENT_DATA = True
-USE_PATIENT_DATA_OPT_LAYER = True
+USE_PATIENT_DATA_OPT_LAYER = False
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 
 # train settings

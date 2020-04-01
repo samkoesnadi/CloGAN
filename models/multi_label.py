@@ -23,6 +23,11 @@ def raw_model_binaryXE(use_patient_data=False):
 		feature_vectors = image_feature_vectors
 
 	image_section_layer = feature_vectors
+
+	# add dropout if needed
+	if DROPOUT_N != 0.:
+		image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
+
 	output_layer = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER)(image_section_layer)
 	output_layer = tf.keras.layers.Activation('sigmoid', dtype='float32', name='predictions')(output_layer)
 
