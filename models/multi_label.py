@@ -14,12 +14,16 @@ def raw_model_binaryXE(use_patient_data=False):
     if use_patient_data:
         # process semantic
         input_semantic = tf.keras.layers.Input(shape=4, name="input_semantic")
-        int_semantic = tf.keras.layers.Dropout(0.2)(input_semantic) if USE_DROPOUT_PAT_DATA else input_semantic
+
+        # Apply Batch Normalization to convert the range ro mean 0 and std 1
+        int_semantic = tf.keras.layers.BatchNormalization()(input_semantic)
+
+        int_semantic = tf.keras.layers.Dropout(0.2)(int_semantic) if USE_DROPOUT_PAT_DATA else int_semantic
 
         feature_vectors_1 = tf.keras.layers.Concatenate()([image_feature_vectors, int_semantic])
 
-        # Apply Batch Normalization to convert the range ro mean 0 and std 1
-        feature_vectors_1 = tf.keras.layers.BatchNormalization()(feature_vectors_1)
+        # # Apply Batch Normalization to convert the range ro mean 0 and std 1
+        # feature_vectors_1 = tf.keras.layers.BatchNormalization()(feature_vectors_1)
 
         if USE_PATIENT_DATA_OPT_LAYER:
             feature_vectors = tf.keras.layers.Dense(2048, activation=tf.nn.leaky_relu,
@@ -36,7 +40,7 @@ def raw_model_binaryXE(use_patient_data=False):
     if DROPOUT_N != 0.:
         image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
 
-    output_layer = tf.keras.layers.Dense(NUM_CLASSES)(image_section_layer)
+    output_layer = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER)(image_section_layer)
     output_layer = tf.keras.layers.Activation('sigmoid', dtype='float32', name='predictions')(output_layer)
 
     # output_layer_object = tf.keras.layers.Dense(NUM_CLASSES,

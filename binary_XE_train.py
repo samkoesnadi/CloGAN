@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
 
     tensorboard_cbk = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOGDIR,
-                                                     histogram_freq=0,
+                                                     histogram_freq=1,
                                                      write_grads=True,
                                                      write_graph=False,
                                                      write_images=False)
