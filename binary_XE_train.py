@@ -27,7 +27,7 @@ if __name__ == "__main__":
         _loss = tf.keras.losses.BinaryCrossentropy()
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-    _metrics = {"predictions": [f1, tf.keras.metrics.AUC()]}  # give recall for metric it is more accurate
+    _metrics = {"predictions": [f1, tf.keras.metrics.AUC(name="auc")]}  # give recall for metric it is more accurate
 
     model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
                                                    monitor="val_auc",

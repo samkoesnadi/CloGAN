@@ -3,7 +3,7 @@ Normal model with binary XE as loss function
 """
 from common_definitions import *
 import tensorflow_addons as tfa
-
+from utils.weightnorm import WeightNormalization
 
 def raw_model_binaryXE(use_patient_data=False):
     input_layer = tf.keras.layers.Input(shape=(IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1), name="input_img")
@@ -17,13 +17,9 @@ def raw_model_binaryXE(use_patient_data=False):
 
         # Apply Batch Normalization to convert the range ro mean 0 and std 1
         int_semantic = tf.keras.layers.BatchNormalization()(input_semantic)
-
         int_semantic = tf.keras.layers.Dropout(0.2)(int_semantic) if USE_DROPOUT_PAT_DATA else int_semantic
 
         feature_vectors_1 = tf.keras.layers.Concatenate()([image_feature_vectors, int_semantic])
-
-        # # Apply Batch Normalization to convert the range ro mean 0 and std 1
-        # feature_vectors_1 = tf.keras.layers.BatchNormalization()(feature_vectors_1)
 
         if USE_PATIENT_DATA_OPT_LAYER:
             feature_vectors = tf.keras.layers.Dense(2048, activation=tf.nn.leaky_relu,
@@ -40,15 +36,12 @@ def raw_model_binaryXE(use_patient_data=False):
     if DROPOUT_N != 0.:
         image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
 
-    output_layer = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER)(image_section_layer)
-    output_layer = tf.keras.layers.Activation('sigmoid', dtype='float32', name='predictions')(output_layer)
+    output_layer_dense = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER,
+                                               kernel_regularizer=tf.keras.regularizers.l2(1e-5))
+    weight_normalized = WeightNormalization(output_layer_dense, data_init=False)(
+        image_section_layer)
 
-    # output_layer_object = tf.keras.layers.Dense(NUM_CLASSES,
-    #                                             kernel_regularizer=tf.keras.regularizers.L1L2(l1=1e-3, l2=1e-3),
-    #                                             bias_regularizer=tf.keras.regularizers.L1L2(l1=1e-2, l2=1e-2))
-    # weight_normalized = tfa.layers.WeightNormalization(output_layer_object, dtype=tf.float32)(
-    #     image_section_layer)
-    # output_layer = tf.keras.layers.Activation('sigmoid', dtype='float32', name='predictions')(weight_normalized)
+    output_layer = tf.keras.layers.Activation("sigmoid", dtype='float32', name='predictions')(weight_normalized)
 
     if use_patient_data:
         return input_layer, input_semantic, output_layer, image_feature_vectors
