@@ -8,6 +8,7 @@ from utils.visualization import *
 from models.multi_label import *
 import skimage.color
 from utils.cylical_learning_rate import CyclicLR
+from utils._auc import AUC
 
 if __name__ == "__main__":
     model = model_binaryXE(USE_PATIENT_DATA)
@@ -27,7 +28,7 @@ if __name__ == "__main__":
         _loss = tf.keras.losses.BinaryCrossentropy()
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-    _metrics = {"predictions": [f1, tf.keras.metrics.AUC(name="auc")]}  # give recall for metric it is more accurate
+    _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)]}  # give recall for metric it is more accurate
 
     model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
                                                    monitor="val_auc",
