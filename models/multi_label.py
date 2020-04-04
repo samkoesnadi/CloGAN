@@ -36,13 +36,15 @@ def raw_model_binaryXE(use_patient_data=False):
     if DROPOUT_N != 0.:
         image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
 
-    output_layer_object = tf.keras.layers.Dense(NUM_CLASSES,
-                                                kernel_regularizer=tf.keras.regularizers.L1L2(l1=1e-3, l2=1e-3),
-                                                bias_regularizer=tf.keras.regularizers.L1L2(l1=1e-2, l2=1e-2),
-                                                kernel_initializer=tf.keras.initializers.Constant(1/2048))
-    weight_normalized = tfa.layers.WeightNormalization(output_layer_object, dtype=tf.float32, data_init=False)(
-        image_section_layer)
-    output_layer = tf.keras.layers.Activation('sigmoid', dtype='float32', name='predictions')(weight_normalized)
+    output_layer = tf.keras.layers.Dense(NUM_CLASSES)(image_section_layer)
+    output_layer = tf.keras.layers.Activation('sigmoid', dtype='float32', name='predictions')(output_layer)
+
+    # output_layer_object = tf.keras.layers.Dense(NUM_CLASSES,
+    #                                             kernel_regularizer=tf.keras.regularizers.L1L2(l1=1e-3, l2=1e-3),
+    #                                             bias_regularizer=tf.keras.regularizers.L1L2(l1=1e-2, l2=1e-2))
+    # weight_normalized = tfa.layers.WeightNormalization(output_layer_object, dtype=tf.float32)(
+    #     image_section_layer)
+    # output_layer = tf.keras.layers.Activation('sigmoid', dtype='float32', name='predictions')(weight_normalized)
 
     if use_patient_data:
         return input_layer, input_semantic, output_layer, image_feature_vectors
