@@ -142,7 +142,7 @@ def write_csv_to_tfrecord(data, target_path):
     print("Writing successful")
 
 
-def read_TFRecord(filename, num_class=14):
+def read_TFRecord(filename, num_class=NUM_CLASSES):
     filenames = [filename]
     raw_dataset = tf.data.TFRecordDataset(filenames)
 

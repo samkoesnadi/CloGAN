@@ -7,6 +7,8 @@ from models.multi_label import model_binaryXE_mid
 from models.multi_class import model_MC_SVM
 from utils.utils import _np_to_binary
 
+PRINT_PREDICTION = True
+
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM(with_feature=True)
@@ -29,12 +31,14 @@ if __name__ == "__main__":
     _color_label = []
     _feature_nps = []
     for i_test, (input, label) in tqdm(enumerate(test_dataset)):
-        label = label.numpy()
+        predictions = model.predict(input)
+
+        label = (predictions[0][:, TRAIN_FIVE_CATS_INDEX] >= 0.3).astype(np.float32) if PRINT_PREDICTION else label.numpy()
         labels = np.array(list(map(_np_to_binary, label)))
-        feature_vectors = model.predict(input)[1]
+        feature_vectors = predictions[1]
 
         # filter zeros
-        _i_zeros = np.squeeze(np.argwhere(labels != 0))
+        _i_zeros = np.argwhere(labels != 0)[:, 0]
         labels = labels[_i_zeros]
         feature_vectors = feature_vectors[_i_zeros]
 

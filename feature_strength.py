@@ -9,8 +9,7 @@ import sklearn.metrics
 import scipy.spatial
 import scipy
 
-GENERATE_FEATURE = True
-PROCESS_DIMRED = True  # make it smaller dimension
+PRINT_PREDICTION = False
 
 FEATURES_N = 234
 BATCH_SIZE = FEATURES_N
@@ -33,10 +32,10 @@ if __name__ == "__main__":
         CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
         CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, shuffle=False,
         use_patient_data=USE_PATIENT_DATA,
+        evaluation_mode=True,
         batch_size=BATCH_SIZE)
 
     _test_n = TEST_N
-    _pca = PCA(n_components=FEATURES_N)
 
     welford_ = Welford()
     end_res = 0
@@ -45,26 +44,32 @@ if __name__ == "__main__":
     n1 = 0
     n2 = 0
     # get the ground truth labels
+    maxi = -np.inf
+    mini = np.inf
+    avg_feature = Welford()
     for i_d, (test_img, test_label) in tqdm(enumerate(test_dataset), total=math.ceil(_test_n / BATCH_SIZE)):
         _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]
         # if _batch_to_fill != BATCH_SIZE: continue  # TODO: this is just temporary ugly fix
 
         # Evaluate the model on the test data using `evaluate`
-        features_np = model.predict(test_img)[1]  # without actual label
-
+        predictions = model.predict(test_img)
+        features_np = predictions[1]  # without actual label
+        maxi = features_np.max() if maxi < features_np.max() else maxi
+        mini = features_np.min() if mini > features_np.min() else mini
+        avg_feature.update(features_np.mean())
         # make the dimension smaller
         # features_np = _pca.fit_transform(features_np)
 
-        w = np.zeros((BATCH_SIZE, BATCH_SIZE))
-        for i in range(BATCH_SIZE):
-            for j in range(i+1, BATCH_SIZE):
+        w = np.zeros((_batch_to_fill, _batch_to_fill))
+        for i in range(_batch_to_fill):
+            for j in range(i+1, _batch_to_fill):
                 w[i, j] = scipy.stats.wasserstein_distance(features_np[i], features_np[j])
 
         # run process of calculating loss
-        for key in np.eye(NUM_CLASSES, dtype=np.float32):
-            index = sklearn.metrics.pairwise.cosine_similarity(test_label, key[np.newaxis, ...])  # (BATCH_SIZE, 1)
+        for key in np.eye(5, dtype=np.float32):
+            index = sklearn.metrics.pairwise.cosine_similarity(predictions[0][:, TRAIN_FIVE_CATS_INDEX] if PRINT_PREDICTION else test_label, key[np.newaxis, ...])  # (BATCH_SIZE, 1)
             wc = (index @ index.T) * w  # (BATCH_SIZE, BATCH_SIZE)
-            wnc = ((1 - index) @ index.T) * w # (BATCH_SIZE, BATCH_SIZE)
+            wnc = ((1 - index) @ index.T) * w  # (BATCH_SIZE, BATCH_SIZE)
             loss1 = wc[wc != 0.]
             loss2 = wnc[wnc != 0.]
 
@@ -76,3 +81,4 @@ if __name__ == "__main__":
     print(losses1 / n1)
     print(losses2 / n2)
     print(losses1 / n1 / (losses2 / n2))
+    print("Max val in feature:", maxi, ", mini val in feature:", mini, "avg:", avg_feature)
