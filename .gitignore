@@ -4,3 +4,6 @@ logs
 *.out
 checkpoints
 report/results
+**/__pycache__
+__pycache__
+weights

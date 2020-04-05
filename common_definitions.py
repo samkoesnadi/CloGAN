@@ -6,39 +6,99 @@ from math import ceil
 import datetime
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
+# swap cp with cp
+USE_CUPY = False
+
+if USE_CUPY:
+    try:
+        import cupy as cp
+        tf.config.set_visible_devices([], 'GPU')
+    except ImportError as e:
+        USE_CUPY = False
+else:
+    cp = np
+
+import tensorflow.keras
+tf.random.set_seed(0)
+np.random.seed(0)
+
+# # On TPUs, use 'mixed_bfloat16' instead
+# from tensorflow.keras.mixed_precision import experimental as mixed_precision
+# policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')
+# mixed_precision.set_policy(policy)
+
 # common global variables
-IMAGE_INPUT_SIZE = 299  # this is because of Xception
+IMAGE_INPUT_SIZE = 224  # this is because of Xception
 NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
-DROPOUT_N = 0.2
-KERNEL_INITIALIZER = tf.keras.initializers.glorot_uniform()
-USE_CLASS_WEIGHT = True
+DROPOUT_N = 0.5
+KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
+
+
+# network model related variable
+USE_SVM = False
+USE_PATIENT_DATA = True
+USE_PATIENT_DATA_OPT_LAYER = False
+TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
+
+# train settings
+USE_CLASS_WEIGHT = False
+USE_SPARSITY_NORM = True
+USE_AUGMENTATION = True
+USE_CLR = True
+USE_DROPOUT_PAT_DATA = True
+
+# eval settings
+EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
+AUC_INTERP_TOGGLE = False  # activate AUC interp
+
+# for manifold learning
+MODEL_SVM_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200126-034328/checkpoints/model_weights.04-0.86.hdf5"
+MODEL_CHEXPERT_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200326-093110/checkpoints/model_weights.04-0.87.hdf5"
+MODEL_CHESTXRAY_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200326-092905/checkpoints/model_weights.04-0.86.hdf5"
+
+
+# evaluation matter
+TRAIN_FIVE_CATS_INDEX = [2, 5, 6, 8, 10] if TRAIN_CHEXPERT else [1, 9, 8, 0, 2]
+EVAL_FIVE_CATS_INDEX = [2, 5, 6, 8, 10] if EVAL_CHEXPERT else [1, 9, 8, 0, 2]
+
+# SVM
+SVM_KERNEL_REGULARIZER = 0.5  # 0.5 is according to the paper
+
+
+# AUC interpolation
+INTERP_NUM_STEPS = 10000
 
 # for training
 BUFFER_SIZE = 1600
-BATCH_SIZE = 16
-TOTAL_EPOCHS = 10
-SUB_EPOCHS = 2  # subepoch. So the total applied epochs will be MAX_EPOCHS*SUB_EPOCHS
+BATCH_SIZE = 32
+MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 # callbacks hyperparameter
-# REDUCELR_FACTOR = .2
-# REDUCELR_PATIENCE = 2
-# REDUCELR_MINLR = 1e-5
+    # clr
+CLR_BASELR = 1e-4
+CLR_MAXLR = 1e-3
+CLR_PATIENCE = 2
 
 MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
 MODELCKP_BEST_ONLY = True
 
+SAVED_MODEL_PATH = './weights/model.h5'
 
 # for validation
 THRESHOLD_SIGMOID = 0.5
 SAMPLE_FILENAME = "./sample/00002032_012.png"
+SAMPLE_PATIENT_DATA = [0.5, 55/100, 0, 0.5]
 
 # for evaluation
 ROC_RESULTS_PATH = "./report/results/ROC_%s.png"
 AUC_RESULTS_PATH = "./report/results/AUC.txt"
+
+# dataset common
+VALID_RATIO = 10/100
 
 # cheXpert dataset
 CHEXPERT_TRAIN_TARGET_TFRECORD_PATH = './cheXpert_datasets/CheXpert_train.tfrecord'
@@ -50,7 +110,46 @@ CHEXPERT_TRAIN_N = 201073
 CHEXPERT_VAL_N = 22341
 CHEXPERT_TEST_N = 234
 
-	# statistics training
+CHEXPERT_LABELS_KEY = ['No Finding', 'Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity', 'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis', 'Pneumothorax', 'Pleural Effusion', 'Pleural Other', 'Fracture', 'Support Devices']
+
+# chestXray-14 dataset
+CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH = 'cheXray14_datasets/CheXray14_train.tfrecord'
+CHESTXRAY_VALID_TARGET_TFRECORD_PATH = 'cheXray14_datasets/CheXray14_valid.tfrecord'
+CHESTXRAY_TEST_TARGET_TFRECORD_PATH = 'cheXray14_datasets/CheXray14_test.tfrecord'
+CHESTXRAY_DATASET_PATH = "../datasets/chestXray14/images"
+
+CHESTXRAY_TRAIN_N = 77872
+CHESTXRAY_VAL_N = 8652
+CHESTXRAY_TEST_N = 25596
+
+CHESTXRAY_LABELS_KEY = ["Atelectasis", "Cardiomegaly", "Effusion", "Infiltration", "Mass", "Nodule", "Pneumonia", "Pneumothorax", "Consolidation", "Edema", "Emphysema", "Fibrosis", "Pleural_Thickening", "Hernia"]
+
+
+# conclusion of dataset
+if TRAIN_CHEXPERT:
+    TRAIN_TARGET_TFRECORD_PATH = CHEXPERT_TRAIN_TARGET_TFRECORD_PATH
+    VALID_TARGET_TFRECORD_PATH = CHEXPERT_VALID_TARGET_TFRECORD_PATH
+    TEST_TARGET_TFRECORD_PATH = CHEXPERT_TEST_TARGET_TFRECORD_PATH
+    DATASET_PATH = CHEXPERT_DATASET_PATH
+    TRAIN_N = CHEXPERT_TRAIN_N
+    VAL_N = CHEXPERT_VAL_N
+    LABELS_KEY = CHEXPERT_LABELS_KEY
+else:
+    TRAIN_TARGET_TFRECORD_PATH = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
+    VALID_TARGET_TFRECORD_PATH = CHESTXRAY_VALID_TARGET_TFRECORD_PATH
+    TEST_TARGET_TFRECORD_PATH = CHESTXRAY_TEST_TARGET_TFRECORD_PATH
+    DATASET_PATH = CHESTXRAY_DATASET_PATH
+    TRAIN_N = CHESTXRAY_TRAIN_N
+    VAL_N = CHESTXRAY_VAL_N
+    LABELS_KEY = CHESTXRAY_LABELS_KEY
+
+if EVAL_CHEXPERT:
+    TEST_N = CHEXPERT_TEST_N
+else:
+    TEST_N = CHESTXRAY_TEST_N
+
+
+    # statistics training
 pos = dict()
 pos[0] = 20155
 pos[1] = 20857
@@ -85,5 +184,36 @@ neg[13] = 95729
 
 
 # calculation
-MAX_EPOCHS = TOTAL_EPOCHS * SUB_EPOCHS
-SUB_CHEXPERT_TRAIN_N = ceil(CHEXPERT_TRAIN_N / SUB_EPOCHS)
+CHEXPERT_CLASS_WEIGHT = \
+    np.array([[ 0.55570203,  4.98816671],
+    [ 0.55786667,  4.82027617],
+    [ 0.59335273 , 3.17801486],
+    [ 0.99554889  ,1.00449109],
+    [ 0.52507704, 10.46928043],
+    [ 0.70556881 , 1.71613779],
+    [ 0.6174778   ,2.62806169],
+    [ 0.56268749,  4.48803625],
+    [ 0.71474325 , 1.66418096],
+    [ 0.55622161  ,4.94668864],
+    [ 0.88969567,  1.14152625],
+    [ 0.51415589 ,18.16049494],
+    [ 0.52251997, 11.60125779],
+    [ 1.05021989 , 0.9543638 ]])
+
+# K_SN cannot be 0.
+if IMAGE_INPUT_SIZE == 320:
+    K_SN = 101313.55625  # 320x320 IMAGE SIZE
+elif IMAGE_INPUT_SIZE == 224:
+    K_SN = 49721.094
+else:
+    K_SN = 1.
+    raise Exception("Please re-calculate K_SN")
+
+FEATURES_NP_FILE_1 = "../records/chextpert_train_input_features"
+FEATURES_NP_FILE_2 = "../records/chestray14_train_input_features"
+
+# kwd and manifold_learning
+if TRAIN_CHEXPERT:
+    FEATURES_NP_FILE = FEATURES_NP_FILE_1
+else:
+    FEATURES_NP_FILE = FEATURES_NP_FILE_2

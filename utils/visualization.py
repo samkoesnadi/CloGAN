@@ -11,18 +11,21 @@ import math
 from utils.utils import *
 import csv
 from scipy import interp
+from scipy.ndimage.interpolation import zoom
+from scipy.interpolate import interp1d
 
 def convert_to_RGB(dz):
     norm = plt.Normalize()
     colors = plt.cm.jet(norm(dz))
     return skimage.color.rgba2rgb(colors)
 
-def grad_cam_plus(input_model, img, layer_name):
+def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=True, patient_data=None):
     cams = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
 
     for i in tqdm(range(NUM_CLASSES), desc="Generate tensorboard's IMAGE"):
         cls = i
-        y_c = input_model.output[0, cls]
+        y_c = input_model.output[0, cls*2+1] if use_multi_class else input_model.output[0, cls]
+        y_c = custom_sigmoid(y_c) if use_svm else y_c
 
         conv_output = input_model.get_layer(layer_name).output
 
@@ -32,8 +35,8 @@ def grad_cam_plus(input_model, img, layer_name):
         second = tf.math.exp(y_c)*grads*grads
         third = tf.math.exp(y_c)*grads*grads*grads
 
-        gradient_function = K.function([input_model.input], [y_c,first,second,third, conv_output, grads])
-        y_c, conv_first_grad, conv_second_grad,conv_third_grad, conv_output, grads_val = gradient_function([img])
+        gradient_function = K.function([input_model.input] if not USE_PATIENT_DATA else input_model.inputs, [y_c,first,second,third, conv_output, grads])
+        y_c, conv_first_grad, conv_second_grad,conv_third_grad, conv_output, grads_val = gradient_function([img] if not USE_PATIENT_DATA else {"input_img": img, "input_semantic":patient_data})
         global_sum = np.sum(conv_output[0].reshape((-1,conv_first_grad[0].shape[2])), axis=0)
 
         alpha_num = conv_second_grad[0]
@@ -53,9 +56,9 @@ def grad_cam_plus(input_model, img, layer_name):
 
         # Passing through ReLU
         cam = np.maximum(grad_CAM_map, 0)
-        cam = cam / np.max(cam) # scale 0 to 1.0
-        cam = skimage.transform.resize(cam, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
-        #cam = resize(cam, (224,224))
+        cam = zoom(cam, IMAGE_INPUT_SIZE / cam.shape[0])
+        cam = cam / np.max(cam)  # scale 0 to 1.0
+        # cam = resize(cam, (224,224))
 
         cams[i] = cam
 
@@ -100,17 +103,18 @@ def get_best_trade_off(_fpr, _tpr, threshold_len, extra_len):
 
     return stable_index
 
-def calculate_roc_auc(labels, predictions):
+def calculate_roc_auc(labels, predictions, auc_interp_toggle):
     # Compute ROC curve and ROC area for each class
     fpr = dict()
     tpr = dict()
     roc_auc = dict()
     thresholds = dict()
+    size = labels.shape[-1]
 
-    for i in range(NUM_CLASSES):
+    for i in range(size):
         fpr[i], tpr[i], _thresholds = roc_curve(labels[:, i], predictions[:, i])
 
-        tpr[i] = np.where(np.isnan(tpr[i]), 0., tpr[i])  # IMPORTANT! because nan here might better be large number
+        tpr[i] = np.where(np.isnan(tpr[i]), 1., tpr[i])  # IMPORTANT! because nan here might better be large number
 
         _fpr = fpr[i]
         _tpr = tpr[i]
@@ -121,6 +125,18 @@ def calculate_roc_auc(labels, predictions):
         stable_index = get_best_trade_off(_fpr, _tpr, threshold_len, extra_len)
         thresholds[i] = ((_thresholds[stable_index] + (_thresholds[stable_index+1] if stable_index + 1 < threshold_len else 0. )) / 2, _fpr[stable_index], _tpr[stable_index])
 
+        if auc_interp_toggle:
+            _unique_fpri = np.unique(fpr[i])
+            _unique_tpri = np.zeros_like(_unique_fpri)
+            for i_uniq, j_uniq in enumerate(_unique_fpri):
+                _unique_tpri[i_uniq] = np.take(tpr[i], np.argwhere(fpr[i] == j_uniq).flatten()).max()
+
+            f_interp = interp1d(_unique_fpri, _unique_tpri, kind='linear')
+
+            x = np.linspace(0, 1., num=INTERP_NUM_STEPS, endpoint=True)
+            fpr[i] = x
+            tpr[i] = f_interp(x)
+
         roc_auc[i] = auc(fpr[i], tpr[i])
 
     # Compute micro-average ROC curve and ROC area
@@ -128,15 +144,15 @@ def calculate_roc_auc(labels, predictions):
     roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
 
     # First aggregate all false positive rates
-    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(NUM_CLASSES)]))
+    all_fpr = np.unique(np.concatenate([fpr[i] for i in range(size)]))
 
     # Then interpolate all ROC curves at this points
     mean_tpr = np.zeros_like(all_fpr)
-    for i in range(NUM_CLASSES):
+    for i in range(size):
         mean_tpr += interp(all_fpr, fpr[i], tpr[i])
 
     # Finally average it and compute AUC
-    mean_tpr /= NUM_CLASSES
+    mean_tpr /= size
 
     fpr["macro"] = all_fpr
     tpr["macro"] = mean_tpr
@@ -144,8 +160,10 @@ def calculate_roc_auc(labels, predictions):
 
     return fpr, tpr, roc_auc, thresholds
 
-def plot_roc(labels, predictions, **kwargs):
-    fpr, tpr, roc_auc, thresholds = calculate_roc_auc(labels, predictions)
+def plot_roc(labels, predictions, compare_interp=True):
+    fpr, tpr, roc_auc, thresholds = calculate_roc_auc(labels, predictions, AUC_INTERP_TOGGLE)
+    if compare_interp:
+        fpr2, tpr2, roc_auc2, thresholds2 = calculate_roc_auc(labels, predictions, not AUC_INTERP_TOGGLE)
 
     get_and_mkdir(ROC_RESULTS_PATH)
 
@@ -165,8 +183,12 @@ def plot_roc(labels, predictions, **kwargs):
         _i_toprint = i+1 if isinstance(i, int) else i
         plt.figure()
         lw = 2
+
         plt.plot(fpr[i], tpr[i], color='darkred',
-               lw=lw, label=str(_i_toprint) + ' (area = %0.2f)' % roc_auc[i])
+               lw=lw, label=("interp" if AUC_INTERP_TOGGLE else "no-interp") + ' (area = %0.3f)' % roc_auc[i])
+        if compare_interp:
+            plt.plot(fpr2[i], tpr2[i], color='darkorange',
+                   lw=lw, label=("interp" if not AUC_INTERP_TOGGLE else "no-interp") + ' (area = %0.3f)' % roc_auc2[i])
         plt.plot([0, 1], [0, 1], color='lightblue', lw=lw, linestyle='--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
@@ -175,11 +197,11 @@ def plot_roc(labels, predictions, **kwargs):
         # plt.title('Receiver operating characteristic')
         plt.legend(loc='lower right')
         plt.savefig(ROC_RESULTS_PATH % str(_i_toprint))
+    return list(map(float, roc_auc.values()))[:-2]
 
 
-
-def Xception_gradcampp(model, img):
-    return grad_cam_plus(model, img, layer_name='block14_sepconv2_act')
+def Xception_gradcampp(model, img, use_svm=False, use_multi_class=False, patient_data=None):
+    return grad_cam_plus(model, img, 'block14_sepconv2_act', use_svm, use_multi_class, patient_data=patient_data)
 
 
 if __name__ == "__main__":
