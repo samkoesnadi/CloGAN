@@ -61,9 +61,9 @@ if __name__ == "__main__":
         # features_np = _pca.fit_transform(features_np)
 
         w = np.zeros((_batch_to_fill, _batch_to_fill))
-        for i in range(_batch_to_fill):
+        for i in tqdm(range(_batch_to_fill)):
             for j in range(i+1, _batch_to_fill):
-                w[i, j] = scipy.stats.wasserstein_distance(features_np[i], features_np[j])
+                w[i, j] = kernel_wasserstein_distance(features_np[i], features_np[j])
 
         # run process of calculating loss
         for key in np.eye(5, dtype=np.float32):

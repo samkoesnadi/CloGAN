@@ -1,41 +1,29 @@
-import numpy as np
-
-# swap cp with cp
-USE_CUPY = True
-
-if USE_CUPY:
-    try:
-        import cupy as cp
-    except ImportError as e:
-        USE_CUPY = False
-else:
-    cp = np
+from common_definitions import *
 
 def calc_J(n):
-    arrow_1 = cp.ones(n)
-    s = arrow_1[cp.newaxis, :].T / n
-    J = (cp.identity(n) - s * arrow_1) / n ** .5
-    return J
+    return (cp.identity(n) - 1 / n) / n ** .5
 
 
 def calc_K(x: cp.ndarray, y: cp.ndarray):
-    return x[cp.newaxis, :].T * y
+    return cp.dot(x, y.T)
+
+import numexpr as ne
+
+def calc_k(x: cp.ndarray, y: cp.ndarray, gamma=1.0):
+    x = x[np.newaxis]
+    y = y[np.newaxis]
+    return cp.exp(-gamma*x.T**2 + -gamma*y**2 + 2*gamma*x.T*y).sum()
+    # return ne.evaluate('exp(A + B + C)', {
+    #     'A' : -gamma*x.T**2,
+    #     'B' : -gamma*y**2,
+    #     'C' : 2*gamma*x.T*y
+    # }).sum()
 
 
-def calc_k(x: cp.ndarray, y: cp.ndarray, gamma=None):
-    x_num_features = x.shape[-1]
-    y_num_features = y.shape[-1]
+CALC_J = calc_J(2048)
+CALC_J_m = cp.matmul(CALC_J, CALC_J.T)
 
-    if gamma is None:
-        gamma = 1.0
-
-    x = cp.repeat(x.T[..., cp.newaxis], y_num_features, 1)
-    y = cp.repeat(y[..., cp.newaxis, :], x_num_features, 0)
-    _sum = cp.exp(-gamma * (x - y) ** 2).sum()
-    return _sum
-
-
-def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray):
+def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray, covariate=True):
     # convert to cupy
     u_values = cp.array(u_values)
     v_values = cp.array(v_values)
@@ -44,19 +32,40 @@ def kernel_wasserstein_distance(u_values: np.ndarray, v_values: np.ndarray):
     n = u_values.size
     m = v_values.size
 
-    J_1 = calc_J(n)
-    J_2 = calc_J(m)
-
     W_2 = calc_k(u_values, u_values) / n ** 2 - calc_k(u_values, v_values) * 2 / (n * m) \
-          + calc_k(v_values, v_values) / m ** 2 + cp.trace(J_1 @ J_1.T @ calc_K(u_values, u_values)) \
-          + cp.trace(J_2 @ J_2.T @ calc_K(v_values, v_values)) \
-          - 2 * cp.trace(calc_K(u_values, v_values) @ J_2 @ J_2.T @ calc_K(v_values, u_values) @ J_1 @ J_1.T) ** .5
+          + calc_k(v_values, v_values) / m ** 2
+
+    if covariate:
+        if n == 2048 and m == 2048:
+            # pre-calculated
+            J_1_m = CALC_J_m
+            J_2_m = CALC_J_m
+        else:
+            J_1 = calc_J(n)
+            J_2 = calc_J(m)
+            J_1_m = cp.matmul(J_1, J_1.T)
+            J_2_m = cp.matmul(J_2, J_2.T)
+
+        # prepare for this
+        u_values = u_values[:, cp.newaxis]
+        v_values = v_values[:, cp.newaxis]
+        calc_K_u_v = calc_K(u_values, v_values)
+
+        W_2 += cp.trace(cp.matmul(J_1_m, calc_K(u_values, u_values))) \
+               + cp.trace(cp.matmul(J_2_m, calc_K(v_values, v_values))) \
+               - 2 * (cp.trace(cp.matmul(cp.matmul(calc_K_u_v, J_2_m), cp.matmul(calc_K_u_v.T, J_1_m)))) ** .5
 
     if USE_CUPY: cp.cuda.Stream.null.synchronize()
 
-    return float(W_2)
+    return W_2
+
 
 if __name__ == "__main__":
     a = cp.random.normal(0, 1, 2048)
-    b = cp.random.normal(10, 1., 2048)
-    print(kernel_wasserstein_distance(a, b))
+    b = cp.random.normal(1, 1., 2048)
+    import time
+    start_time = time.time()
+    a = ([kernel_wasserstein_distance(a, b, True) for _ in range(1)])
+    print("time spent:", time.time() - start_time)
+    print(a)
+    print(kernel_wasserstein_distance(a, b, False))
