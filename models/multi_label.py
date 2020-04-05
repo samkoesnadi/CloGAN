@@ -36,9 +36,8 @@ def raw_model_binaryXE(use_patient_data=False):
     if DROPOUT_N != 0.:
         image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
 
-    output_layer_dense = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER,
-                                               kernel_regularizer=tf.keras.regularizers.l2(1e-5))
-    weight_normalized = WeightNormalization(output_layer_dense, data_init=False)(
+    output_layer_dense = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER)
+    weight_normalized = WeightNormalization(output_layer_dense, data_init=True)(
         image_section_layer)
 
     output_layer = tf.keras.layers.Activation("sigmoid", dtype='float32', name='predictions')(weight_normalized)
