@@ -72,7 +72,7 @@ CLR_BASELR = 1e-4
 CLR_MAXLR = 1e-3
 CLR_PATIENCE = 2
 
-MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
+MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{%s:.2f}.hdf5" % ("val_predictions_auc" if USE_FEATURE_LOSS else "val_auc")  # do not change the format of basename
 MODELCKP_BEST_ONLY = True
 
 SAVED_MODEL_PATH = './weights/model.h5'

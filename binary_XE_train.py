@@ -36,12 +36,12 @@ if __name__ == "__main__":
     _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)]}  # give recall for metric it is more accurate
 
     model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
-                                                   monitor="val_auc",
+                                                   monitor="val_predictions_auc" if USE_FEATURE_LOSS else "val_auc",
                                                    verbose=1,
                                                    save_best_only=MODELCKP_BEST_ONLY,
                                                    save_weights_only=True,
                                                    mode="max")
-    early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_auc',
+    early_stopping = tf.keras.callbacks.EarlyStopping(monitor="val_predictions_auc" if USE_FEATURE_LOSS else 'val_auc',
                                                       verbose=1,
                                                       patience=int(CLR_PATIENCE * 2.5),
                                                       mode='max',
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         if USE_PATIENT_DATA:
             prediction = model.predict({"input_img": image, "input_semantic": patient_data})[0]
         else:
-            prediction = model.predict(image)[0]
+            prediction = (model.predict(image)[0] if USE_FEATURE_LOSS else model.predict(image))[0]
 
         prediction_dict = {LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
 
@@ -97,6 +97,14 @@ if __name__ == "__main__":
                              description="GradCAM++ per classes")
             tf.summary.scalar("epoch_lr", lr, step=epoch)
 
+            # print gradients
+            weights = [w for w in model.trainable_weights if "dense" in w]
+            loss = model.total_loss
+            optimizer = model.optimizer
+            gradients = optimizer.get_gradients(loss, weights)
+            for t in gradients:
+                tf.summary.histogram(t.name, data=t, step=epoch, description="Gradient")
+
 
     tensorboard_cbk = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOGDIR,
                                                      histogram_freq=1,
@@ -108,7 +116,7 @@ if __name__ == "__main__":
     cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
     lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
 
-    _callbacks = [clr if USE_CLR else lrate, model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
+    _callbacks = [clr if USE_CLR else lrate, tensorboard_cbk, cm_callback, model_ckp, early_stopping]  # callbacks list
 
     # start training
     model.fit(train_dataset,
