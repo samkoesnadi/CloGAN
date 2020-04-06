@@ -97,14 +97,6 @@ if __name__ == "__main__":
                              description="GradCAM++ per classes")
             tf.summary.scalar("epoch_lr", lr, step=epoch)
 
-            # print gradients
-            weights = [w for w in model.trainable_weights if "dense" in w]
-            loss = model.total_loss
-            optimizer = model.optimizer
-            gradients = optimizer.get_gradients(loss, weights)
-            for t in gradients:
-                tf.summary.histogram(t.name, data=t, step=epoch, description="Gradient")
-
 
     tensorboard_cbk = tf.keras.callbacks.TensorBoard(log_dir=TENSORBOARD_LOGDIR,
                                                      histogram_freq=1,
@@ -123,7 +115,7 @@ if __name__ == "__main__":
               epochs=MAX_EPOCHS,
               validation_data=val_dataset,
               initial_epoch=init_epoch,
-              steps_per_epoch=2,
+              # steps_per_epoch=2,
               callbacks=_callbacks,
               verbose=1)
 
