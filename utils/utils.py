@@ -8,6 +8,49 @@ from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
 
 
+def pm_W(x, y):
+    return tf.norm(x - y, ord=2, axis=-1)
+
+@tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_CLASSES], dtype=tf.float32),
+                              tf.TensorSpec(shape=[None, 2048], dtype=tf.float32)))
+def feature_loss(_y_true, _features):
+    losses1 = 0.
+    losses2 = 0.
+    n1 = 0.
+    n2 = 0.
+
+    # normalize the features to 0...1
+    _foo = tf.math.reduce_mean(_features)
+    _features = (_features - _foo) / tf.math.reduce_std(_features) + _foo
+
+    _batch_to_fill = _features.shape[0]
+
+    # calculate the distance matrix / heat map
+    w = tf.linalg.band_part(pm_W(_features[:, None, :], _features), 0, -1)
+
+    # run process of calculating loss
+    keys = tf.eye(NUM_CLASSES)
+    _epsilon = tf.keras.backend.epsilon()
+    indexs = tf.transpose(tf.matmul(_y_true / tf.norm(tf.math.add(_y_true, _epsilon), ord=2, axis=-1, keepdims=True), \
+                                    keys / tf.norm(tf.math.add(keys, _epsilon), ord=2, axis=-1, keepdims=True)))[
+        ..., None]  # 14 x 32 x 1
+
+    for index in indexs:
+        index_T = tf.transpose(index)
+        wc = (index @ index_T) * w  # (BATCH_SIZE, BATCH_SIZE)
+        wnc = ((1 - index) @ index_T) * w  # (BATCH_SIZE, BATCH_SIZE)
+
+        loss1 = wc[wc != 0.]
+        loss2 = wnc[wnc != 0.]
+
+        n1 += (tf.cast(tf.size(loss1), dtype=tf.float32))
+        n2 += (tf.cast(tf.size(loss2), dtype=tf.float32))
+        losses1 += (tf.reduce_sum(loss1))
+        losses2 += (tf.reduce_sum(loss2))
+
+    return losses1 / (losses2 + _epsilon) * n2 / (n1 + _epsilon)
+
+
 def f1(y_true, y_pred):  # taken from old keras source code
     # threshold y_pred
     y_pred = tf.cast(tf.math.greater_equal(y_pred, tf.cast(THRESHOLD_SIGMOID, tf.float32)), tf.float32)

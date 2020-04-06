@@ -11,21 +11,26 @@ from utils.cylical_learning_rate import CyclicLR
 from utils._auc import AUC
 
 if __name__ == "__main__":
-    model = model_binaryXE(USE_PATIENT_DATA)
+    model = model_binaryXE_mid(USE_PATIENT_DATA) if USE_FEATURE_LOSS else model_binaryXE(USE_PATIENT_DATA)
 
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
-                                 use_patient_data=USE_PATIENT_DATA)
-    val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA)
-    test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA)
+                                 use_patient_data=USE_PATIENT_DATA, use_feature_loss=USE_FEATURE_LOSS)
+    val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA, use_feature_loss=USE_FEATURE_LOSS)
+    test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA, use_feature_loss=USE_FEATURE_LOSS)
 
     clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
                    step_size=CLR_PATIENCE * ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
 
+    _losses = []
     if USE_CLASS_WEIGHT:
         _loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
     else:
         _loss = tf.keras.losses.BinaryCrossentropy()
+    _losses.append(_loss)
+
+    if USE_FEATURE_LOSS:
+        _losses.append(feature_loss)
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
     _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)]}  # give recall for metric it is more accurate
@@ -51,7 +56,7 @@ if __name__ == "__main__":
             print("[Load weight] No weight is found")
 
     model.compile(optimizer=_optimizer,
-                  loss=_loss,
+                  loss=_losses,
                   metrics=_metrics)
 
     file_writer_cm = tf.summary.create_file_writer(TENSORBOARD_LOGDIR + '/cm')
@@ -110,7 +115,7 @@ if __name__ == "__main__":
               epochs=MAX_EPOCHS,
               validation_data=val_dataset,
               initial_epoch=init_epoch,
-              # steps_per_epoch=1,
+              steps_per_epoch=2,
               callbacks=_callbacks,
               verbose=1)
 

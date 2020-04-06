@@ -1,10 +1,10 @@
+from utils.kwd import *
 from utils.welford import Welford
 from datasets.cheXpert_dataset import read_dataset
 from utils.visualization import *
 from models.multi_label import *
 from models.multi_class import model_MC_SVM
 from sklearn.decomposition import PCA
-from utils.kwd import *
 import sklearn.metrics
 import scipy.spatial
 import scipy
@@ -63,14 +63,15 @@ if __name__ == "__main__":
         w = np.zeros((_batch_to_fill, _batch_to_fill))
         for i in tqdm(range(_batch_to_fill)):
             for j in range(i+1, _batch_to_fill):
-                w[i, j] = kernel_wasserstein_distance(features_np[i], features_np[j])
-                # w[i, j] = scipy.stats.wasserstein_distance(features_np[i], features_np[j])
+                # w[i, j] = kernel_wasserstein_distance(features_np[i], features_np[j], covariate=False)
+                w[i, j] = scipy.stats.wasserstein_distance(features_np[i], features_np[j])
 
         # run process of calculating loss
         for key in np.eye(5, dtype=np.float32):
             index = sklearn.metrics.pairwise.cosine_similarity(predictions[0][:, TRAIN_FIVE_CATS_INDEX] if PRINT_PREDICTION else test_label, key[np.newaxis, ...])  # (BATCH_SIZE, 1)
             wc = (index @ index.T) * w  # (BATCH_SIZE, BATCH_SIZE)
             wnc = ((1 - index) @ index.T) * w  # (BATCH_SIZE, BATCH_SIZE)
+
             loss1 = wc[wc != 0.]
             loss2 = wnc[wnc != 0.]
 

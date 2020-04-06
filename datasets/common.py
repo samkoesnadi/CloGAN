@@ -166,7 +166,8 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                  evaluation_mode=False,
                  shuffle=True,
                  batch_size=BATCH_SIZE,
-                 buffer_size=BUFFER_SIZE):
+                 buffer_size=BUFFER_SIZE,
+                 use_feature_loss=False):
     dataset = read_TFRecord(filename, num_class)
 
     dataset = dataset.map(lambda data: (
@@ -199,7 +200,7 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.map(
-        lambda x, patient_data, label: (tf.image.rgb_to_grayscale(tf.clip_by_value(x, 0, 1)), patient_data, label),
+        lambda x, patient_data, label: (tf.image.rgb_to_grayscale(tf.clip_by_value(x, 0, 1)), patient_data, (label, label) if use_feature_loss else label),
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if use_patient_data:

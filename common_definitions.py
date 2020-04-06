@@ -6,18 +6,6 @@ from math import ceil
 import datetime
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-# swap cp with cp
-USE_CUPY = False
-
-if USE_CUPY:
-    try:
-        import cupy as cp
-        tf.config.set_visible_devices([], 'GPU')
-    except ImportError as e:
-        USE_CUPY = False
-else:
-    cp = np
-
 import tensorflow.keras
 tf.random.set_seed(0)
 np.random.seed(0)
@@ -37,14 +25,15 @@ KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 
 # network model related variable
 USE_SVM = False
-USE_PATIENT_DATA = True
+USE_PATIENT_DATA = False
 USE_PATIENT_DATA_OPT_LAYER = False
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 
 # train settings
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
-USE_AUGMENTATION = True
+USE_AUGMENTATION = False
+USE_FEATURE_LOSS = True
 USE_CLR = True
 USE_DROPOUT_PAT_DATA = True
 
@@ -72,7 +61,7 @@ INTERP_NUM_STEPS = 10000
 # for training
 BUFFER_SIZE = 1600
 BATCH_SIZE = 32
-MAX_EPOCHS = 20
+MAX_EPOCHS = 50
 LEARNING_RATE = 1e-4
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
