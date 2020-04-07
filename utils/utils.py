@@ -11,7 +11,7 @@ from utils._auc import AUC
 
 
 def pm_W(x, y):
-    return tf.norm(x - y, axis=-1)
+    return tf.linalg.norm(x - y, axis=-1)
 
 
 @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_CLASSES], dtype=tf.float32),
@@ -25,7 +25,7 @@ def feature_loss(_y_true, _features):
 
     # calculate the distance matrix / heat map
     w = pm_W(_features[:, None, :], _features)
-    w = tf.nn.relu(w)  # to mitigate the negative result of w // TODO: why is there even a negative in a norm?!
+    w = tf.math.abs(w)  # to mitigate the negative result of w // TODO: why is there even a negative in a norm?!
 
     # run process of calculating loss
     keys = tf.eye(_num_classes)
