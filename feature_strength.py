@@ -60,5 +60,5 @@ if __name__ == "__main__":
         losses3 += loss
         n += 1
 
-    print(losses3 / n)
+    print(losses3.numpy() / n)
     print("Max val in feature:", maxi, ", mini val in feature:", mini, "avg:", avg_feature)

@@ -28,14 +28,14 @@ if __name__ == "__main__":
     if USE_CLASS_WEIGHT:
         _loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
     else:
-        _loss = tf.keras.losses.BinaryCrossentropy()
+        _loss = tf.keras.losses.BinaryCrossentropy(from_logits=False)
     _losses.append(_loss)
 
     if USE_FEATURE_LOSS:
         _losses.append(feature_loss)
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-    _metrics = {"predictions": [f1, AUC_five_classes(name="auc", multi_label=True)],
+    _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)],
                 "tf_op_layer_image_feature_vectors": []}  # give recall for metric it is more accurate
 
     model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
