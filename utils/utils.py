@@ -3,52 +3,73 @@ import glob
 import re
 import numpy as np
 from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NUM_CLASSES, CLR_MAXLR, CLR_BASELR, \
-    CLR_PATIENCE
+    CLR_PATIENCE, TRAIN_FIVE_CATS_INDEX, EVAL_FIVE_CATS_INDEX
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
 
+from utils._auc import AUC
+
 
 def pm_W(x, y):
-    return tf.norm(x - y, ord=2, axis=-1)
+    return tf.norm(x - y, axis=-1)
+
 
 @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_CLASSES], dtype=tf.float32),
                               tf.TensorSpec(shape=[None, 2048], dtype=tf.float32)))
 def feature_loss(_y_true, _features):
-    losses1 = 0.
-    losses2 = 0.
-    n1 = 0.
-    n2 = 0.
-
     # normalize the features to 0...1
     _foo = tf.math.reduce_mean(_features)
     _features = (_features - _foo) / tf.math.reduce_std(_features) + _foo
 
-    _batch_to_fill = _features.shape[0]
+    _num_classes = _y_true.shape[1]
 
     # calculate the distance matrix / heat map
-    w = tf.linalg.band_part(pm_W(_features[:, None, :], _features), 0, -1)
+    w = pm_W(_features[:, None, :], _features)
+    w = tf.nn.relu(w)  # to mitigate the negative result of w // TODO: why is there even a negative in a norm?!
 
     # run process of calculating loss
-    keys = tf.eye(NUM_CLASSES)
+    keys = tf.eye(_num_classes)
     _epsilon = tf.keras.backend.epsilon()
-    indexs = tf.transpose(tf.matmul(_y_true / tf.norm(tf.math.add(_y_true, _epsilon), ord=2, axis=-1, keepdims=True), \
-                                    keys / tf.norm(tf.math.add(keys, _epsilon), ord=2, axis=-1, keepdims=True)))[
+    indexs = tf.transpose(tf.matmul(_y_true / tf.norm(tf.math.add(_y_true, _epsilon), axis=-1, keepdims=True),
+                                    keys / tf.norm(tf.math.add(keys, _epsilon), axis=-1, keepdims=True)))[
         ..., None]  # 14 x 32 x 1
 
+    _losses = 0.
     for index in indexs:
         index_T = tf.transpose(index)
-        wc = (index @ index_T) * w  # (BATCH_SIZE, BATCH_SIZE)
-        wnc = ((1 - index) @ index_T) * w  # (BATCH_SIZE, BATCH_SIZE)
+        index_inv = 1 - index
 
-        loss1 = wc[wc != 0.]
-        loss2 = wnc[wnc != 0.]
+        # index calculation
+        i_c = index @ index_T
+        i_nc = index_inv @ index_T
+        i_nc_inv = tf.ones_like(index) @ tf.transpose(index_inv) + i_c
 
-        n1 += (tf.cast(tf.size(loss1), dtype=tf.float32))
-        n2 += (tf.cast(tf.size(loss2), dtype=tf.float32))
-        losses1 += (tf.reduce_sum(loss1))
-        losses2 += (tf.reduce_sum(loss2))
+        wc = i_c * w  # (BATCH_SIZE, BATCH_SIZE)
+        wnc = i_nc * w  # (BATCH_SIZE, BATCH_SIZE)
 
-    return losses1 / (losses2 + _epsilon) * n2 / (n1 + _epsilon)
+        # apply tanh
+        wc = tf.math.tanh(wc)
+        wnc = tf.math.tanh(wnc)
+
+        wnc += i_nc_inv  # make the masked value one
+
+        loss1 = tf.reduce_max(wc)
+        loss2 = tf.reduce_min(wnc)
+
+        # calculate the log loss
+        _losses += -tf.math.log(1. - loss1 + _epsilon) - \
+                   tf.math.log(loss2 + _epsilon)
+
+    return _losses / _num_classes
+
+
+class AUC_five_classes(AUC):
+    def __init__(self, **kwargs):
+        super().__init__(num_classes=5, **kwargs)
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        super().update_state(tf.gather(y_true, TRAIN_FIVE_CATS_INDEX, axis=-1),
+                             tf.gather(y_pred, TRAIN_FIVE_CATS_INDEX, axis=-1), sample_weight)
 
 
 def f1(y_true, y_pred):  # taken from old keras source code

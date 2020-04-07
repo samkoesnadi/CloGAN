@@ -1,4 +1,4 @@
-from kwd import kernel_wasserstein_distance
+from utils.kwd import kernel_wasserstein_distance
 from common_definitions import *
 import sklearn.metrics
 import scipy.stats

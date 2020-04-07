@@ -13,12 +13,7 @@ import skimage.color
 target_filename = "./sample/00002032_006.png"
 target_filename = "~/Downloads/pneumonia3.jpg"
 if __name__ == "__main__":
-	# if LOAD_WEIGHT_BOOL:
-	# 	model = tf.keras.models.load_model(SAVED_MODEL_PATH, custom_objects={'weighted_loss': get_weighted_loss(CHEXPERT_CLASS_WEIGHT), 'f1': f1})
-	# else:
-	# 	model = model_binaryXE()
-
-	model = model_binaryXE()
+	model = model_binaryXE(USE_PATIENT_DATA)
 
 	if LOAD_WEIGHT_BOOL:
 		target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
@@ -33,9 +28,13 @@ if __name__ == "__main__":
 
 	image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
-	prediction = model.predict(image)
+	patient_data = np.zeros((1,4))
+	if USE_PATIENT_DATA:
+		prediction = model.predict({"input_img": image, "input_semantic": patient_data})[0]
+	else:
+		prediction = model.predict(image)[0]
 
-	gradcampps = Xception_gradcampp(model, image)
+	gradcampps = Xception_gradcampp(model, image, patient_data=patient_data)
 
 	results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
@@ -56,7 +55,7 @@ if __name__ == "__main__":
 
 	for i_r, result in enumerate(results, 1):
 		axarr[i_r // max_row_n, i_r % max_row_n].imshow(result)
-		axarr[i_r // max_row_n, i_r % max_row_n].set_title(LABELS_KEY[i_r - 1] + "({:.2f})".format(prediction[0, i_r - 1]))
+		axarr[i_r // max_row_n, i_r % max_row_n].set_title(LABELS_KEY[i_r - 1] + "({:.2f})".format(prediction[i_r - 1]))
 		axarr[i_r // max_row_n, i_r % max_row_n].axis('off')
 
 	plt.grid(b=None)

@@ -7,7 +7,7 @@ from models.multi_label import model_binaryXE_mid
 from models.multi_class import model_MC_SVM
 from utils.utils import _np_to_binary
 
-PRINT_PREDICTION = True
+PRINT_PREDICTION = False
 
 if __name__ == "__main__":
     if USE_SVM:

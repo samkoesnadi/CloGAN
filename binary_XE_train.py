@@ -33,7 +33,7 @@ if __name__ == "__main__":
         _losses.append(feature_loss)
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-    _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)]}  # give recall for metric it is more accurate
+    _metrics = {"predictions": [f1, AUC_five_classes(name="auc", multi_label=True)], "global_average_pooling2d": []}  # give recall for metric it is more accurate
 
     model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
                                                    monitor="val_predictions_auc" if USE_FEATURE_LOSS else "val_auc",
@@ -57,7 +57,9 @@ if __name__ == "__main__":
 
     model.compile(optimizer=_optimizer,
                   loss=_losses,
-                  metrics=_metrics)
+                  metrics=_metrics,
+                  loss_weights={"predictions": 0, "global_average_pooling2d": 1}
+                  )
 
     file_writer_cm = tf.summary.create_file_writer(TENSORBOARD_LOGDIR + '/cm')
 
@@ -79,7 +81,7 @@ if __name__ == "__main__":
 
         lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
-        gradcampps = Xception_gradcampp(model, image, patient_data=patient_data)
+        gradcampps = Xception_gradcampp(model, image, patient_data=patient_data, use_feature_loss=USE_FEATURE_LOSS)
 
         results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 

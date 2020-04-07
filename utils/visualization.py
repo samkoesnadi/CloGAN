@@ -19,12 +19,12 @@ def convert_to_RGB(dz):
     colors = plt.cm.jet(norm(dz))
     return skimage.color.rgba2rgb(colors)
 
-def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=True, patient_data=None):
+def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=False, patient_data=None, use_feature_loss=False):
     cams = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
 
     for i in tqdm(range(NUM_CLASSES), desc="Generate tensorboard's IMAGE"):
         cls = i
-        _input_model_output = input_model.output[1] if USE_FEATURE_LOSS else input_model.output
+        _input_model_output = input_model.output[1] if use_feature_loss else input_model.output
         y_c = _input_model_output[0, cls*2+1] if use_multi_class else _input_model_output[0, cls]
         y_c = custom_sigmoid(y_c) if use_svm else y_c
 
@@ -201,8 +201,8 @@ def plot_roc(labels, predictions, compare_interp=True):
     return list(map(float, roc_auc.values()))[:-2]
 
 
-def Xception_gradcampp(model, img, use_svm=False, use_multi_class=False, patient_data=None):
-    return grad_cam_plus(model, img, 'block14_sepconv2_act', use_svm, use_multi_class, patient_data=patient_data)
+def Xception_gradcampp(model, img, use_svm=False, use_multi_class=False, patient_data=None, use_feature_loss=False):
+    return grad_cam_plus(model, img, 'block14_sepconv2_act', use_svm, use_multi_class, patient_data=patient_data, use_feature_loss=use_feature_loss)
 
 
 if __name__ == "__main__":
