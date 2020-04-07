@@ -58,7 +58,7 @@ if __name__ == "__main__":
     model.compile(optimizer=_optimizer,
                   loss=_losses,
                   metrics=_metrics,
-                  loss_weights={"predictions": 0, "global_average_pooling2d": 1}
+                  loss_weights={"predictions": 1, "global_average_pooling2d": 0}
                   )
 
     file_writer_cm = tf.summary.create_file_writer(TENSORBOARD_LOGDIR + '/cm')

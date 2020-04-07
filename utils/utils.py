@@ -14,9 +14,8 @@ def pm_W(x, y):
     return tf.linalg.norm(x - y, axis=-1)
 
 
-@tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_CLASSES], dtype=tf.float32),
-                              tf.TensorSpec(shape=[None, 2048], dtype=tf.float32)))
-def feature_loss(_y_true, _features):
+@tf.function
+def _feature_loss(_y_true, _features):
     # normalize the features to 0...1
     _foo = tf.math.reduce_mean(_features)
     _features = (_features - _foo) / tf.math.reduce_std(_features) + _foo
@@ -25,7 +24,8 @@ def feature_loss(_y_true, _features):
 
     # calculate the distance matrix / heat map
     w = pm_W(_features[:, None, :], _features)
-    w = tf.math.abs(w)  # to mitigate the negative result of w // TODO: why is there even a negative in a norm?!
+    # w = tf.keras.losses.cosine_similarity(_features[:, None, :], _features) + 1
+    w = tf.math.abs(tf.math.tanh(w))  # set range to 0...1
 
     # run process of calculating loss
     keys = tf.eye(_num_classes)
@@ -42,26 +42,30 @@ def feature_loss(_y_true, _features):
         # index calculation
         i_c = index @ index_T
         i_nc = index_inv @ index_T
-        i_nc_inv = tf.ones_like(index) @ tf.transpose(index_inv) + i_c
+        _foo = tf.ones_like(index) @ tf.transpose(index_inv)
+        i_nc_inv = _foo + i_c
+        # i_c_inv = _foo + i_nc
 
         wc = i_c * w  # (BATCH_SIZE, BATCH_SIZE)
         wnc = i_nc * w  # (BATCH_SIZE, BATCH_SIZE)
 
-        # apply tanh
-        wc = tf.math.tanh(wc)
-        wnc = tf.math.tanh(wnc)
-
-        wnc += i_nc_inv  # make the masked value one
+        # make the masked value one
+        # wc += i_c_inv
+        wnc += i_nc_inv
 
         loss1 = tf.reduce_max(wc)
         loss2 = tf.reduce_min(wnc)
 
         # calculate the log loss
-        _losses += -tf.math.log(1. - loss1 + _epsilon) - \
+        _losses += -tf.math.log(loss1 + _epsilon) - \
                    tf.math.log(loss2 + _epsilon)
 
     return _losses / _num_classes
 
+@tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_CLASSES], dtype=tf.float32),
+                              tf.TensorSpec(shape=[None, 2048], dtype=tf.float32)))
+def feature_loss(y_true, feature):
+    return _feature_loss(y_true, feature)
 
 class AUC_five_classes(AUC):
     def __init__(self, **kwargs):
