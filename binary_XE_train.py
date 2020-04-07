@@ -16,8 +16,10 @@ if __name__ == "__main__":
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
                                  use_patient_data=USE_PATIENT_DATA, use_feature_loss=USE_FEATURE_LOSS)
-    val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA, use_feature_loss=USE_FEATURE_LOSS)
-    test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA, use_feature_loss=USE_FEATURE_LOSS)
+    val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
+                               use_feature_loss=USE_FEATURE_LOSS)
+    test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
+                                use_feature_loss=USE_FEATURE_LOSS)
 
     clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
                    step_size=CLR_PATIENCE * ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
@@ -33,7 +35,8 @@ if __name__ == "__main__":
         _losses.append(feature_loss)
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-    _metrics = {"predictions": [f1, AUC_five_classes(name="auc", multi_label=True)], "global_average_pooling2d": []}  # give recall for metric it is more accurate
+    _metrics = {"predictions": [f1, AUC_five_classes(name="auc", multi_label=True)],
+                "tf_op_layer_image_feature_vectors": []}  # give recall for metric it is more accurate
 
     model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
                                                    monitor="val_predictions_auc" if USE_FEATURE_LOSS else "val_auc",
@@ -58,7 +61,7 @@ if __name__ == "__main__":
     model.compile(optimizer=_optimizer,
                   loss=_losses,
                   metrics=_metrics,
-                  loss_weights={"predictions": 1, "global_average_pooling2d": 1}
+                  loss_weights={"predictions": RATIO_LOSSES[0], "tf_op_layer_image_feature_vectors": RATIO_LOSSES[1]} if USE_FEATURE_LOSS else 1
                   )
 
     file_writer_cm = tf.summary.create_file_writer(TENSORBOARD_LOGDIR + '/cm')

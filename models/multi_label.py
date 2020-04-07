@@ -5,11 +5,23 @@ from common_definitions import *
 import tensorflow_addons as tfa
 from utils.weightnorm import WeightNormalization
 
-def raw_model_binaryXE(use_patient_data=False):
+def raw_model_binaryXE(use_patient_data=False, use_feature_loss=USE_FEATURE_LOSS):
     input_layer = tf.keras.layers.Input(shape=(IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1), name="input_img")
     image_section_model = tf.keras.applications.xception.Xception(include_top=False, weights=None, pooling="avg",
                                                                   input_tensor=input_layer)
     image_feature_vectors = image_section_model.output
+
+    if use_feature_loss:
+        @tf.custom_gradient
+        def _custom(x):
+            def grad(dy):
+                return dy / (RATIO_LOSSES[0] + RATIO_LOSSES[1])
+
+            return x, grad
+
+        image_feature_vectors = _custom(image_feature_vectors)
+
+    image_feature_vectors = tf.identity(image_feature_vectors, name="image_feature_vectors")  # to change the name
 
     if use_patient_data:
         # process semantic
