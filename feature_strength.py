@@ -31,9 +31,9 @@ if __name__ == "__main__":
         CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
         CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, shuffle=False,
         use_patient_data=USE_PATIENT_DATA,
-        evaluation_mode=False,
+        evaluation_mode=True,
         batch_size=TEST_N)
-    # test_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA, use_feature_loss=False, evaluation_mode=False, batch_size=BATCH_SIZE).take(100)
+    # test_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA, use_feature_loss=False, evaluation_mode=True, batch_size=BATCH_SIZE).take(100)
 
     welford_ = Welford()
     losses3 = 0
