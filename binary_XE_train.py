@@ -35,8 +35,7 @@ if __name__ == "__main__":
         _losses.append(feature_loss)
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-    _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)],
-                "tf_op_layer_image_feature_vectors": []}  # give recall for metric it is more accurate
+    _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)]}  # give recall for metric it is more accurate
 
     model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
                                                    monitor="val_predictions_auc" if USE_FEATURE_LOSS else "val_auc",
@@ -61,7 +60,7 @@ if __name__ == "__main__":
     model.compile(optimizer=_optimizer,
                   loss=_losses,
                   metrics=_metrics,
-                  loss_weights={"predictions": RATIO_LOSSES[0], "tf_op_layer_image_feature_vectors": RATIO_LOSSES[1]} if USE_FEATURE_LOSS else 1
+                  loss_weights={"predictions": RATIO_LOSSES[0], "tf_op_layer_image_feature_vectors": RATIO_LOSSES[1]} if USE_FEATURE_LOSS else {"predictions": 1}
                   )
 
     file_writer_cm = tf.summary.create_file_writer(TENSORBOARD_LOGDIR + '/cm')
@@ -78,7 +77,10 @@ if __name__ == "__main__":
         if USE_PATIENT_DATA:
             prediction = model.predict({"input_img": image, "input_semantic": patient_data})[0]
         else:
-            prediction = (model.predict(image)[0] if USE_FEATURE_LOSS else model.predict(image))[0]
+            prediction = model.predict(image)[0]
+
+        if USE_FEATURE_LOSS:
+            prediction = prediction[0]
 
         prediction_dict = {LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
 
