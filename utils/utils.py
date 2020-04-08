@@ -13,23 +13,28 @@ from utils._auc import AUC
 def pm_W(x, y):
     return tf.linalg.norm(x - y, axis=-1)
 
-
 @tf.function
 def _feature_loss(_y_true, _features):
-    # normalize the features to 0...1
-    _foo = tf.math.reduce_mean(_features)
-    _features = (_features - _foo) / tf.math.reduce_std(_features) + _foo
+    _epsilon = tf.keras.backend.epsilon()  # epsilon of keras
+
+    # # normalize the features to 0...1 , this leads to unwanted fixed distance, because the distributions are now similar
+    # _foo = tf.math.reduce_mean(_features)
+    # _features = (_features - _foo) / tf.math.reduce_std(_features) + _foo
 
     _num_classes = _y_true.shape[1]
 
     # calculate the distance matrix / heat map
     w = pm_W(_features[:, None, :], _features)
     # w = tf.keras.losses.cosine_similarity(_features[:, None, :], _features) + 1
-    w = tf.math.abs(tf.math.tanh(w))  # set range to 0...1
+    w = 1. - tf.exp(-tf.math.abs(w))  # set range to 0...1
+
+    # wrong things because of sup and inf
+    # return w
+    # w = tf.math.abs(tf.math.tanh(w))
+    # return -2 * tf.math.log(w + _epsilon)
 
     # run process of calculating loss
     keys = tf.eye(_num_classes)
-    _epsilon = tf.keras.backend.epsilon()
     indexs = tf.transpose(tf.matmul(_y_true / tf.norm(tf.math.add(_y_true, _epsilon), axis=-1, keepdims=True),
                                     keys / tf.norm(tf.math.add(keys, _epsilon), axis=-1, keepdims=True)))[
         ..., None]  # 14 x 32 x 1
