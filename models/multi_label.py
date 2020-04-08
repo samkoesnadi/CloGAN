@@ -2,7 +2,6 @@
 Normal model with binary XE as loss function
 """
 from common_definitions import *
-import tensorflow_addons as tfa
 from utils.weightnorm import WeightNormalization
 
 def raw_model_binaryXE(use_patient_data=False, use_feature_loss=USE_FEATURE_LOSS):
