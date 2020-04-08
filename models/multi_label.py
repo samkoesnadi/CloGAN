@@ -11,6 +11,9 @@ def raw_model_binaryXE(use_patient_data=False, use_feature_loss=USE_FEATURE_LOSS
                                                                   input_tensor=input_layer)
     image_feature_vectors = image_section_model.output
 
+    # add regularizer as the experiments show that it results positively when the avg value of image_feature_vectors is small
+    image_feature_vectors = tf.keras.layers.ActivityRegularization(l2=ACTIVIY_REGULARIZER_VAL)(image_feature_vectors)
+
     if use_feature_loss:
         @tf.custom_gradient
         def _custom(x):
@@ -28,7 +31,7 @@ def raw_model_binaryXE(use_patient_data=False, use_feature_loss=USE_FEATURE_LOSS
         input_semantic = tf.keras.layers.Input(shape=4, name="input_semantic")
 
         # Apply Batch Normalization to convert the range ro mean 0 and std 1
-        int_semantic = tf.keras.layers.BatchNormalization()(input_semantic)
+        int_semantic = tf.keras.layers.BatchNormalization(renorm=True)(input_semantic)
         int_semantic = tf.keras.layers.Dropout(0.2)(int_semantic) if USE_DROPOUT_PAT_DATA else int_semantic
 
         feature_vectors_1 = tf.keras.layers.Concatenate()([image_feature_vectors, int_semantic])
@@ -36,7 +39,7 @@ def raw_model_binaryXE(use_patient_data=False, use_feature_loss=USE_FEATURE_LOSS
         if USE_PATIENT_DATA_OPT_LAYER:
             feature_vectors = tf.keras.layers.Dense(2048, activation=tf.nn.leaky_relu,
                                                     kernel_initializer=KERNEL_INITIALIZER)(feature_vectors_1)
-            feature_vectors = tf.keras.layers.BatchNormalization()(feature_vectors)
+            feature_vectors = tf.keras.layers.BatchNormalization(renorm=True)(feature_vectors)
         else:
             feature_vectors = feature_vectors_1
     else:

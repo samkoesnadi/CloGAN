@@ -64,6 +64,7 @@ BUFFER_SIZE = 1600
 BATCH_SIZE = 32
 MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4
+ACTIVIY_REGULARIZER_VAL = 1e-4
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
