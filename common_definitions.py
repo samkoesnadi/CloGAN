@@ -34,7 +34,7 @@ TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
 USE_AUGMENTATION = False
-USE_FEATURE_LOSS = False
+USE_FEATURE_LOSS = True
 RATIO_LOSSES = [1,
                 1]  # only if feature loss is on... ratio between binaryXE and feature loss. Please be careful with the gradients before image_feature_vector
 USE_CLR = True

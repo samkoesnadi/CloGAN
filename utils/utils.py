@@ -18,8 +18,8 @@ def _feature_loss(_y_true, _features):
     _epsilon = tf.keras.backend.epsilon()  # epsilon of keras
 
     # # normalize the features to 0...1 , this leads to unwanted fixed distance, because the distributions are now similar
-    # _foo = tf.math.reduce_mean(_features)
-    # _features = (_features - _foo) / tf.math.reduce_std(_features) + _foo
+    # _foo = tf.math.reduce_mean(_features, axis=-1, keepdims=True)
+    # _features = (_features - _foo) / tf.math.reduce_std(_features, axis=-1, keepdims=True) + _foo
 
     _num_classes = _y_true.shape[1]
 
