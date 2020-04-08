@@ -3,7 +3,7 @@ import glob
 import re
 import numpy as np
 from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NUM_CLASSES, CLR_MAXLR, CLR_BASELR, \
-    CLR_PATIENCE, TRAIN_FIVE_CATS_INDEX, EVAL_FIVE_CATS_INDEX
+    CLR_PATIENCE, TRAIN_FIVE_CATS_INDEX, EVAL_FIVE_CATS_INDEX, DISTANCE_METRIC
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
 
@@ -24,8 +24,11 @@ def _feature_loss(_y_true, _features):
     _num_classes = _y_true.shape[1]
 
     # calculate the distance matrix / heat map
-    w = pm_W(_features[:, None, :], _features)
-    # w = tf.keras.losses.cosine_similarity(_features[:, None, :], _features) + 1
+    if DISTANCE_METRIC == "cosine":
+        w = tf.keras.losses.cosine_similarity(_features[:, None, :], _features) + 1
+    else:
+        w = pm_W(_features[:, None, :], _features)
+
     w = 1. - tf.exp(-tf.math.abs(w))  # set range to 0...1
 
     # wrong things because of sup and inf
