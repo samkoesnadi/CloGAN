@@ -13,6 +13,95 @@ def pm_W(x, y):
     return tf.linalg.norm(x - y, ord=1, axis=-1) / 2048
 
 
+class FeatureLoss(tf.keras.losses.Loss):
+    def __init__(self, num_classes=NUM_CLASSES, alpha=.1, **kwargs):
+        super().__init__(**kwargs)
+        self._mean_features = tf.random.normal((num_classes, 2048))
+        self._num_classes = num_classes
+        self._alpha = alpha
+
+    @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_CLASSES], dtype=tf.float32),
+                                  tf.TensorSpec(shape=[None, 2048], dtype=tf.float32)))
+    def call(self, _y_true, _features):
+        _epsilon = tf.keras.backend.epsilon()  # epsilon of keras
+
+        # # normalize the features to 0...1 , this leads to unwanted fixed distance, because the distributions are now similar
+        # _foo = tf.math.reduce_mean(_features, axis=0)
+        # _features = (_features - _foo) / tf.math.reduce_std(_features)
+
+        _num_classes = self._num_classes
+
+        # run process of calculating loss
+        keys = tf.eye(_num_classes)
+        _indexs = tf.matmul(_y_true / (tf.norm(tf.math.add(_y_true, _epsilon), axis=-1, keepdims=True) + _epsilon),
+                                        keys / (tf.norm(tf.math.add(keys, _epsilon), axis=-1, keepdims=True) + _epsilon))  # 32 x 14
+        _indexs_ones = tf.matmul(_y_true, keys)  # contains all ones, 32 x 14
+
+        # prepare for indexs later
+        indexs = tf.transpose(_indexs)[..., None]  # 14 x 32 x 1
+        indexs_ones = tf.transpose(_indexs_ones)[..., None]  # 14 x 32 x 1
+
+        _mean_features = tf.reduce_sum(indexs * _features[None, ...], axis=1) / (tf.reduce_sum(indexs, axis=1) + _epsilon)  # 14x2048
+
+        # compute the difference between the new mean and the old mean
+        _mean_diff = _mean_features - self._mean_features
+
+        # update the global mean features
+        self._mean_features = self._mean_features + self._alpha * _mean_diff
+
+        # # distance further the different classes
+        # w = pm_W(self._mean_features[:, None, :], self._mean_features)
+        # # w /= tf.reduce_max(w)
+        # w = 1 - tf.math.exp(-w)
+        # return -tf.math.log(w + tf.eye(self._num_classes) + _epsilon)
+
+
+        # update features
+        _features = _features - tf.reduce_sum(_indexs[..., None] * (_mean_features - self._mean_features)[None, ...], axis=1) / (tf.reduce_sum(_indexs[..., None], axis=1) + _epsilon)
+
+        # calculate the distance matrix / heat map
+        if DISTANCE_METRIC == "cosine":
+            w = tf.keras.losses.cosine_similarity(_features[:, None, :], _features) + 1
+        else:
+            w = pm_W(_features[:, None, :], _features)
+
+        _mask = 1. - tf.linalg.band_part(tf.ones_like(w), -1, 0)
+        # w = tf.boolean_mask(w, _mask)
+
+        _losses = 0.
+        _n = 0.
+        for index in indexs_ones:
+            index_T = tf.transpose(index)
+            # index_inv = 1 - index
+
+            # index calculation
+            i_c = index @ index_T
+            i_nc = (1 - i_c)
+            # _foo = tf.ones_like(index) @ tf.transpose(index_inv)
+
+            # mask the indicator matrix
+            # i_c = i_c * _mask
+            i_nc = i_nc * _mask
+
+            # wc = i_c * w  # (BATCH_SIZE, BATCH_SIZE)
+            wnc = i_nc * w  # (BATCH_SIZE, BATCH_SIZE)
+
+            # make the masked value one
+            # wc += i_c_inv
+            # wnc += i_nc_inv
+
+            # scale it
+            # wnc = wnc / (tf.math.reduce_max(wnc) + _epsilon)
+            wnc = 1. - tf.math.exp(-wnc)
+
+            # calculate the log loss
+            _loss = - tf.math.log(wnc[wnc != 0.])
+            _losses += tf.reduce_sum(_loss)
+            _n += tf.reduce_sum(i_nc)
+
+        return _losses / _n
+
+
 @tf.function
 def _feature_loss(_y_true, _features):
     _epsilon = tf.keras.backend.epsilon()  # epsilon of keras
@@ -29,8 +118,12 @@ def _feature_loss(_y_true, _features):
     else:
         w = pm_W(_features[:, None, :], _features)
 
+    _mask = 1. - tf.linalg.band_part(tf.ones_like(w), -1, 0)
+    # w = tf.boolean_mask(w, _mask)
+
+    w = w * _mask
     # w = 1. - tf.exp(-w)  # set range to 0...1
-    return -2 * tf.math.log(w + _epsilon)
+    # return -tf.math.log(w + _epsilon)
 
     # wrong things because of sup and inf
     # return tf.reduce_mean(w)
@@ -44,8 +137,9 @@ def _feature_loss(_y_true, _features):
         ..., None]  # 14 x 32 x 1
 
     _losses = 0.
+    _n = 0.
     for index in indexs:
-        index_T = tf.transpose(index)
+        index_T = tf.transpose(tf.ones_like(index))
         index_inv = 1 - index
 
         # index calculation
@@ -53,25 +147,32 @@ def _feature_loss(_y_true, _features):
         i_nc = index_inv @ index_T
         _foo = tf.ones_like(index) @ tf.transpose(index_inv)
         # i_nc_inv = _foo + i_c
-        i_c_inv = _foo + i_nc
+        # i_c_inv = _foo + i_nc
 
         wc = i_c * w  # (BATCH_SIZE, BATCH_SIZE)
         wnc = i_nc * w  # (BATCH_SIZE, BATCH_SIZE)
 
         # make the masked value one
-        wc += i_c_inv
+        # wc += i_c_inv
         # wnc += i_nc_inv
 
         # loss1 = tf.reduce_mean(wc)
         # loss2 = tf.reduce_mean(wnc)
 
-        # calculate the log loss
-        _loss = - tf.math.log(wc + _epsilon) - \
-                           tf.math.log(1. - wnc + _epsilon)
-        # _losses += tf.math.abs(tf.reduce_sum(_loss) - 2 * tf.math.log(2.))
-        _losses += tf.reduce_sum(_loss)
+        # scale it
+        wnc = wnc / (tf.math.reduce_max(wnc) + _epsilon)
 
-    return _losses / tf.cast(_num_classes * tf.math.reduce_prod(tf.shape(w)), dtype=tf.float32)
+        wnc = wnc[wnc != 0.]
+
+        # calculate the log loss
+        _loss = - tf.math.log(wnc)
+
+        # tf.math.log(1. - wnc + _epsilon)
+        # _losses += tf.math.abs(tf.reduce_sum(_loss) - 2 * tf.math.log(2.))
+        _losses += tf.reduce_max(_loss)
+        _n += tf.cast(tf.size(_loss), dtype=tf.float32)
+
+    return _losses / _num_classes
 
 
 @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_CLASSES], dtype=tf.float32),

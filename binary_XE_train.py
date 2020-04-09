@@ -32,7 +32,7 @@ if __name__ == "__main__":
     _losses.append(_loss)
 
     if USE_FEATURE_LOSS:
-        _losses.append(feature_loss)
+        _losses.append(FeatureLoss(num_classes=NUM_CLASSES, alpha=FeL_ALPHA))
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
     _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)]}  # give recall for metric it is more accurate
@@ -56,12 +56,6 @@ if __name__ == "__main__":
             model.load_weights(target_model_weight)
         else:
             print("[Load weight] No weight is found")
-
-    model.compile(optimizer=_optimizer,
-                  loss=_losses,
-                  metrics=_metrics,
-                  loss_weights={"predictions": RATIO_LOSSES[0], "tf_op_layer_image_feature_vectors": RATIO_LOSSES[1]} if USE_FEATURE_LOSS else {"predictions": 1}
-                  )
 
     file_writer_cm = tf.summary.create_file_writer(TENSORBOARD_LOGDIR + '/cm')
 
@@ -115,7 +109,43 @@ if __name__ == "__main__":
     cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
     lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
 
-    _callbacks = [clr if USE_CLR else lrate, tensorboard_cbk, cm_callback, model_ckp, early_stopping]  # callbacks list
+    class FECallback(tf.keras.callbacks.Callback):
+        def __init__(self, pred_loss, feature_loss, base_feature_loss_ratio=0.5):
+            super().__init__()
+            self.pred_loss = pred_loss
+            self.feature_loss = feature_loss
+            self.base_feature_loss_ratio = base_feature_loss_ratio
+
+            self._lowest_pred_loss = 0.
+
+        # customize your behavior
+        def on_train_batch_end(self, batch, logs=None):
+            _cur_pred_loss = logs["predictions_loss"]
+            # _cur_feat_loss = logs["tf_op_layer_image_feature_vectors_loss"]
+
+            if batch == 0:
+                self._lowest_pred_loss = _cur_pred_loss
+
+            self.feature_loss.assign(min((self._lowest_pred_loss / _cur_pred_loss), 1.) ** 2 * self.base_feature_loss_ratio)
+            logs["rat_feL"] = self.feature_loss
+
+            # update the lowerst pred loss
+            self._lowest_pred_loss = self._lowest_pred_loss + 0.1 * (_cur_pred_loss - self._lowest_pred_loss)
+
+    _callbacks = []
+
+    if USE_FEATURE_LOSS:
+        _callbacks.append(FECallback(RATIO_LOSSES[0], RATIO_LOSSES[1], base_feature_loss_ratio=BASE_FELOSS_RAT))
+
+    _callbacks.extend([clr if USE_CLR else lrate, tensorboard_cbk, cm_callback, model_ckp, early_stopping])  # callbacks list
+
+
+
+    model.compile(optimizer=_optimizer,
+                  loss=_losses,
+                  metrics=_metrics,
+                  loss_weights={"predictions": RATIO_LOSSES[0], "tf_op_layer_image_feature_vectors": RATIO_LOSSES[1]} if USE_FEATURE_LOSS else {"predictions": 1}
+                  )
 
     # start training
     model.fit(train_dataset,

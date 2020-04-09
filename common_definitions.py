@@ -37,15 +37,22 @@ USE_AUGMENTATION = False
 USE_FEATURE_LOSS = True
 USE_CLR = True
 USE_DROPOUT_PAT_DATA = True
+BUFFER_SIZE = 1600
+BATCH_SIZE = 32
+MAX_EPOCHS = 20
+LEARNING_RATE = 1e-4
+ACTIVIY_REGULARIZER_VAL = 1e-4
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # for feature loss
-RATIO_LOSSES = [1,
-                1]  # only if feature loss is on... ratio between binaryXE and feature loss. Please be careful with the gradients before image_feature_vector
+BASE_FELOSS_RAT = 0.5
+RATIO_LOSSES = [tf.Variable(1.),
+                tf.Variable(BASE_FELOSS_RAT)]  # only if feature loss is on... ratio between binaryXE and feature loss. Please be careful with the gradients before image_feature_vector
 DISTANCE_METRIC = "custom"  # "cosine" or "custom"
+FeL_ALPHA = .2
 
 # for manifold learning
 MODEL_SVM_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200126-034328/checkpoints/model_weights.04-0.86.hdf5"
@@ -61,13 +68,6 @@ SVM_KERNEL_REGULARIZER = 0.5  # 0.5 is according to the paper
 
 # AUC interpolation
 INTERP_NUM_STEPS = 10000
-
-# for training
-BUFFER_SIZE = 1600
-BATCH_SIZE = 32
-MAX_EPOCHS = 20
-LEARNING_RATE = 1e-4
-ACTIVIY_REGULARIZER_VAL = 1e-4
 
 TENSORBOARD_LOGDIR = "./logs/kusdaNet/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -214,9 +214,7 @@ if TRAIN_CHEXPERT:
 else:
     FEATURES_NP_FILE = FEATURES_NP_FILE_2
 
-# normalize RATIO_LOSSES
-if RATIO_LOSSES[0]:
-    RATIO_LOSSES[1] = RATIO_LOSSES[1] / RATIO_LOSSES[0]
-    RATIO_LOSSES[0] = 1.
-else:
-    RATIO_LOSSES[1] = 1.
+# # normalize RATIO_LOSSES
+# _total_ratio = RATIO_LOSSES[1] + RATIO_LOSSES[0]
+# RATIO_LOSSES[1] /= _total_ratio
+# RATIO_LOSSES[0] /= _total_ratio
