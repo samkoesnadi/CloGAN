@@ -13,11 +13,11 @@ def raw_model_binaryXE(use_patient_data=False, use_feature_loss=USE_FEATURE_LOSS
     # add regularizer as the experiments show that it results positively when the avg value of image_feature_vectors is small
     image_feature_vectors = tf.keras.layers.ActivityRegularization(l2=ACTIVIY_REGULARIZER_VAL)(image_feature_vectors)
 
-    if use_feature_loss:
+    if use_feature_loss and RATIO_LOSSES[1] != 0:
         @tf.custom_gradient
         def _custom(x):
             def grad(dy):
-                return dy / (RATIO_LOSSES[0] + RATIO_LOSSES[1])
+                return dy / 2  # two because there are three gradients involved. TODO: check if this is valid
 
             return x, grad
 

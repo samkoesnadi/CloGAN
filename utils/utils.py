@@ -6,20 +6,20 @@ from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NU
     CLR_PATIENCE, TRAIN_FIVE_CATS_INDEX, EVAL_FIVE_CATS_INDEX, DISTANCE_METRIC
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
-
 from utils._auc import AUC
 
 
 def pm_W(x, y):
-    return tf.linalg.norm(x - y, axis=-1)
+    return tf.linalg.norm(x - y, ord=1, axis=-1) / 2048
+
 
 @tf.function
 def _feature_loss(_y_true, _features):
     _epsilon = tf.keras.backend.epsilon()  # epsilon of keras
 
     # # normalize the features to 0...1 , this leads to unwanted fixed distance, because the distributions are now similar
-    # _foo = tf.math.reduce_mean(_features, axis=-1, keepdims=True)
-    # _features = (_features - _foo) / tf.math.reduce_std(_features, axis=-1, keepdims=True) + _foo
+    # _foo = tf.math.reduce_mean(_features)
+    # _features = (_features - _foo) / tf.math.reduce_std(_features)
 
     _num_classes = _y_true.shape[1]
 
@@ -29,12 +29,13 @@ def _feature_loss(_y_true, _features):
     else:
         w = pm_W(_features[:, None, :], _features)
 
-    w = 1. - tf.exp(-tf.math.abs(w))  # set range to 0...1
+    # w = 1. - tf.exp(-w)  # set range to 0...1
+    return -2 * tf.math.log(w + _epsilon)
 
     # wrong things because of sup and inf
-    # return w
+    # return tf.reduce_mean(w)
     # w = tf.math.abs(tf.math.tanh(w))
-    # return -2 * tf.math.log(w + _epsilon)
+    # return - 2 * tf.math.log(w + _epsilon)
 
     # run process of calculating loss
     keys = tf.eye(_num_classes)
@@ -51,29 +52,33 @@ def _feature_loss(_y_true, _features):
         i_c = index @ index_T
         i_nc = index_inv @ index_T
         _foo = tf.ones_like(index) @ tf.transpose(index_inv)
-        i_nc_inv = _foo + i_c
-        # i_c_inv = _foo + i_nc
+        # i_nc_inv = _foo + i_c
+        i_c_inv = _foo + i_nc
 
         wc = i_c * w  # (BATCH_SIZE, BATCH_SIZE)
         wnc = i_nc * w  # (BATCH_SIZE, BATCH_SIZE)
 
         # make the masked value one
-        # wc += i_c_inv
-        wnc += i_nc_inv
+        wc += i_c_inv
+        # wnc += i_nc_inv
 
-        loss1 = tf.reduce_max(wc)
-        loss2 = tf.reduce_min(wnc)
+        # loss1 = tf.reduce_mean(wc)
+        # loss2 = tf.reduce_mean(wnc)
 
         # calculate the log loss
-        _losses += -tf.math.log(loss1 + _epsilon) - \
-                   tf.math.log(loss2 + _epsilon)
+        _loss = - tf.math.log(wc + _epsilon) - \
+                           tf.math.log(1. - wnc + _epsilon)
+        # _losses += tf.math.abs(tf.reduce_sum(_loss) - 2 * tf.math.log(2.))
+        _losses += tf.reduce_sum(_loss)
 
-    return _losses / _num_classes
+    return _losses / tf.cast(_num_classes * tf.math.reduce_prod(tf.shape(w)), dtype=tf.float32)
+
 
 @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_CLASSES], dtype=tf.float32),
                               tf.TensorSpec(shape=[None, 2048], dtype=tf.float32)))
 def feature_loss(y_true, feature):
     return _feature_loss(y_true, feature)
+
 
 class AUC_five_classes(AUC):
     def __init__(self, **kwargs):
