@@ -1,9 +1,16 @@
 from common_definitions import *
-import scipy.stats
+import scipy.spatial
 from utils.utils import FeatureLoss
 import numpy as np
 
 if __name__ == "__main__":
+    print(1. - scipy.spatial.distance.cosine(np.array([0,0,0,1,0]), np.array([0,0,1,1,0])))
+    print(1. - scipy.spatial.distance.cosine(np.array([0,0,0,1,0]), np.array([0,0,0,1,0])))
+    print(1. - scipy.spatial.distance.cosine(np.array([0,0,0,1,0]), np.array([0,1,1,1,0])))
+    print(1. - scipy.spatial.distance.cosine(np.array([0,0,0,1,0]), np.array([1,1,1,1,1])))
+    print(1. - scipy.spatial.distance.cosine(np.array([0,0,0,1,0]), np.array([1,0,1,0,0])))
+
+    # exit()
     # a = np.arange(32*2048).reshape((32, 2048))
     # b = a[:, None, :]
     #

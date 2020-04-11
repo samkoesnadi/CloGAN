@@ -1,6 +1,6 @@
 from utils.kwd import *
 from utils.feature_loss import loss_2
-from utils.utils import _feature_loss
+from utils.utils import FeatureLoss
 from utils.welford import Welford
 from datasets.cheXpert_dataset import read_dataset
 from utils.visualization import *
@@ -42,6 +42,8 @@ if __name__ == "__main__":
     maxi = -np.inf
     mini = np.inf
     avg_feature = Welford()
+    feature_loss = FeatureLoss(5, use_moving_average=False)
+
     for i_d, (test_img, test_label) in tqdm(enumerate(test_dataset)):
         _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]
         # if _batch_to_fill != BATCH_SIZE: continue  # TODO: this is just temporary ugly fix
@@ -56,7 +58,7 @@ if __name__ == "__main__":
         # features_np = _pca.fit_transform(features_np)
 
         # calculate
-        loss = _feature_loss(test_label, features_np)
+        loss = feature_loss(tf.convert_to_tensor(test_label, dtype=tf.float32), tf.convert_to_tensor(features_np, dtype=tf.float32))
         losses3 += loss
         n += 1
 

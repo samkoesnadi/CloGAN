@@ -126,11 +126,18 @@ if __name__ == "__main__":
             if batch == 0:
                 self._lowest_pred_loss = _cur_pred_loss
 
-            self.feature_loss.assign(min((self._lowest_pred_loss / _cur_pred_loss), 1.) ** 2 * self.base_feature_loss_ratio)
+            # self.feature_loss.assign(min((self._lowest_pred_loss / _cur_pred_loss), 1.) ** 2 * self.base_feature_loss_ratio)
+
+            # TODO: check if this is valid
+            if self._lowest_pred_loss < _cur_pred_loss:
+                self.feature_loss.assign(0.)
+            else:
+                self.feature_loss.assign(self.base_feature_loss_ratio)
+
             logs["rat_feL"] = self.feature_loss
 
             # update the lowerst pred loss
-            self._lowest_pred_loss = self._lowest_pred_loss + 0.1 * (_cur_pred_loss - self._lowest_pred_loss)
+            self._lowest_pred_loss = self._lowest_pred_loss + UPDATE_LOSS_SCHEDULER_ALPHA * (_cur_pred_loss - self._lowest_pred_loss)
 
     _callbacks = []
 
@@ -152,7 +159,7 @@ if __name__ == "__main__":
               epochs=MAX_EPOCHS,
               validation_data=val_dataset,
               initial_epoch=init_epoch,
-              # steps_per_epoch=2,
+              # steps_per_epoch=200,
               callbacks=_callbacks,
               verbose=1)
 
