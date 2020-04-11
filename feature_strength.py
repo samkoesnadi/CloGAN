@@ -42,7 +42,7 @@ if __name__ == "__main__":
     maxi = -np.inf
     mini = np.inf
     avg_feature = Welford()
-    feature_loss = FeatureLoss(5, use_moving_average=False)
+    feature_loss = FeatureLoss(5)
 
     for i_d, (test_img, test_label) in tqdm(enumerate(test_dataset)):
         _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]

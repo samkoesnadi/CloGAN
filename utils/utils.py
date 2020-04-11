@@ -43,25 +43,26 @@ class FeatureLoss(tf.keras.losses.Loss):
         indexs = tf.transpose(_indexs)[..., None]  # 14 x 32 x 1
         indexs_ones = tf.transpose(_indexs_ones)[..., None]  # 14 x 32 x 1
 
+        _mean_features = tf.reduce_sum(indexs_ones * _features[None, ...], axis=1) / (
+                tf.reduce_sum(indexs_ones, axis=1) + _epsilon)  # 14x2048
         if self._moving_average_bool:
-            _mean_features = tf.reduce_sum(indexs_ones * _features[None, ...], axis=1) / (
-                    tf.reduce_sum(indexs_ones, axis=1) + _epsilon)  # 14x2048
-
             # compute the difference between the new mean and the old mean
             _mean_diff = _mean_features - self._mean_features
 
             # update the global mean features
             self._mean_features = self._mean_features + self._alpha * _mean_diff
+        else:
+            self._mean_features = _mean_features
 
-            # update features
-            # _centered_features = _features - tf.reduce_sum(_indexs_ones[..., None] * _mean_features) / (
-            #                     tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)
-            # _features = _features - tf.reduce_sum(
-            #     _indexs_ones[..., None] * (_mean_features - self._mean_features)[None, ...], axis=1) / (
-            #                     tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)
-            _diff_features = tf.reduce_sum(
-                _indexs_ones[..., None] * self._mean_features[None, ...], axis=1) / (
-                                tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)  # 32x2048
+        # update features
+        # _centered_features = _features - tf.reduce_sum(_indexs_ones[..., None] * _mean_features) / (
+        #                     tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)
+        # _features = _features - tf.reduce_sum(
+        #     _indexs_ones[..., None] * (_mean_features - self._mean_features)[None, ...], axis=1) / (
+        #                     tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)
+        _diff_features = tf.reduce_sum(
+            _indexs_ones[..., None] * self._mean_features[None, ...], axis=1) / (
+                            tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)  # 32x2048
 
         # calculate the distance matrix / heat map
         if DISTANCE_METRIC == "cosine":

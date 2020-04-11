@@ -46,7 +46,7 @@ LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # eval settings
-EVAL_CHEXPERT = False  # important if false then, it is trained on chestxray14
+EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # for feature loss
@@ -56,7 +56,7 @@ RATIO_LOSSES = [tf.Variable(1., dtype=tf.float32),
 DISTANCE_METRIC = "custom"  # "cosine" or "custom"
 FeL_ALPHA = .1
 UPDATE_LOSS_SCHEDULER_ALPHA = .05
-SELECT_INTRATER_CLASS = True  # False for intra and True for inter
+SELECT_INTRATER_CLASS = False  # False for intra and True for inter
 SELECT_CLOSER_OR_FURTHER = False  # False for closer and True for further
 
 # for manifold learning
