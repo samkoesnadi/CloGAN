@@ -168,8 +168,3 @@ if __name__ == "__main__":
                              # steps=ceil(CHEXPERT_TEST_N / BATCH_SIZE)
                              )
     print('test loss, test f1, test auc:', results)
-
-    # Save the entire model to a HDF5 file.
-    # The '.h5' extension indicates that the model shuold be saved to HDF5.
-    get_and_mkdir(SAVED_MODEL_PATH)
-    model.save(SAVED_MODEL_PATH)

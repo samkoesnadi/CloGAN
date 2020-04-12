@@ -50,14 +50,15 @@ EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # for feature loss
-BASE_FELOSS_RAT = 0.25
+# BASE_FELOSS_RAT = 0.25  # for inter further
+BASE_FELOSS_RAT = 0.125  # for intra closer
 RATIO_LOSSES = [tf.Variable(1., dtype=tf.float32),
                 tf.Variable(BASE_FELOSS_RAT, dtype=tf.float32)]  # only if feature loss is on... ratio between binaryXE and feature loss. Please be careful with the gradients before image_feature_vector
 DISTANCE_METRIC = "custom"  # "cosine" or "custom"
 FeL_ALPHA = .1
 UPDATE_LOSS_SCHEDULER_ALPHA = .05
 SELECT_INTRATER_CLASS = False  # False for intra and True for inter
-SELECT_CLOSER_OR_FURTHER = False  # False for closer and True for further
+SELECT_CLOSER_OR_FURTHER = True  # False for closer and True for further
 
 # for manifold learning
 MODEL_SVM_PATH = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/all_trainings/20200126-034328/checkpoints/model_weights.04-0.86.hdf5"
