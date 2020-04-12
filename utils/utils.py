@@ -18,6 +18,10 @@ def pm_W(x, y=None, from_diff=True):
     return norm / 2048
 
 
+def allclose(x, y, rtol=1e-5, atol=1e-8):
+    return tf.reduce_all(tf.abs(x - y) <= tf.abs(y) * rtol + atol)
+
+
 class FeatureLoss(tf.keras.losses.Loss):
     def __init__(self, num_classes=NUM_CLASSES, use_moving_average=True, alpha=.1, **kwargs):
         super().__init__(**kwargs)
@@ -43,8 +47,9 @@ class FeatureLoss(tf.keras.losses.Loss):
         indexs = tf.transpose(_indexs)[..., None]  # 14 x 32 x 1
         indexs_ones = tf.transpose(_indexs_ones)[..., None]  # 14 x 32 x 1
 
-        _mean_features = tf.reduce_sum(indexs_ones * _features[None, ...], axis=1) / (
+        _mean_features = (indexs_ones[..., 0] @ _features) / (
                 tf.reduce_sum(indexs_ones, axis=1) + _epsilon)  # 14x2048
+
         if self._moving_average_bool:
             # compute the difference between the new mean and the old mean
             _mean_diff = _mean_features - self._mean_features
@@ -55,12 +60,12 @@ class FeatureLoss(tf.keras.losses.Loss):
             self._mean_features = _mean_features
 
         # calculate the distance matrix / heat map
-        # _features = _features - tf.reduce_sum(
-        #     _indexs_ones[..., None] * (_mean_features - self._mean_features)[None, ...], axis=1) / (
-        #                     tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)
         if SELECT_INTRATER_CLASS:
-            _centered_features = _features - tf.reduce_sum(_indexs_ones[..., None] * _mean_features) / (
+            _centered_features = _features - tf.reduce_sum(_indexs_ones[..., None] * self._mean_features) / (
                                 tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)
+            # _features = _features - tf.reduce_sum(
+            #     _indexs_ones[..., None] * (_mean_features - self._mean_features)[None, ...], axis=1) / (
+            #                     tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)
             w = pm_W(_centered_features, _centered_features)  # 32x32
         else:
             _diff_features = tf.reduce_sum(
