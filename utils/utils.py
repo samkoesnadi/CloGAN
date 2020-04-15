@@ -90,7 +90,7 @@ class FeatureLoss(tf.keras.losses.Loss):
         _losses = 0.
         _n = 0.
         for _i in range(_num_classes):
-            i_c = indexs_ones[0] @ tf.transpose(indexs[0])  # bsxbs
+            i_c = indexs_ones[_i] @ tf.transpose(indexs[_i])  # bsxbs
 
             # either this
             i_c = (i_c + tf.transpose(i_c)) / 2.
