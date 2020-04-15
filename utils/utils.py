@@ -116,6 +116,7 @@ class FeatureLoss(tf.keras.losses.Loss):
             self._td_mean_features = self._td_mean_features + self._alpha * _td_mean_diff
         else:
             self._mean_features = _mean_features
+            self._td_mean_features = _td_mean_features
 
         # calculate the distance matrix / heat map
         _diff_features = tf.reduce_sum(

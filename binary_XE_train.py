@@ -164,8 +164,6 @@ if __name__ == "__main__":
 
     _callbacks.extend([clr if USE_CLR else lrate, tensorboard_cbk, model_ckp, early_stopping])  # callbacks list
 
-
-
     model.compile(optimizer=_optimizer,
                   loss=_losses,
                   metrics=_metrics,
