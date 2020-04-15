@@ -61,17 +61,18 @@ class FeatureLoss(tf.keras.losses.Loss):
 
         # calculate the distance matrix / heat map
         if SELECT_INTRATER_CLASS:
+            _diff_features = tf.reduce_sum(
+                _indexs_ones[..., None] * self._mean_features[None, ...], axis=1) / (
+                                tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)  # 32x2048
+            w = pm_W(_diff_features, from_diff=True)  # 32x32
+        else:
             _centered_features = _features - tf.reduce_sum(_indexs_ones[..., None] * self._mean_features) / (
                                 tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)
             # _features = _features - tf.reduce_sum(
             #     _indexs_ones[..., None] * (_mean_features - self._mean_features)[None, ...], axis=1) / (
             #                     tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)
             w = pm_W(_centered_features, _centered_features)  # 32x32
-        else:
-            _diff_features = tf.reduce_sum(
-                _indexs_ones[..., None] * self._mean_features[None, ...], axis=1) / (
-                                tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)  # 32x2048
-            w = pm_W(_diff_features, from_diff=True)  # 32x32
+
 
         # if DISTANCE_METRIC == "cosine":
         #     w = tf.keras.losses.cosine_similarity(_features[:, None, :], _features) + 1
@@ -85,7 +86,6 @@ class FeatureLoss(tf.keras.losses.Loss):
         w_loss = - tf.math.log((w if SELECT_CLOSER_OR_FURTHER else (1. - w)) + _epsilon)
 
         _mask = 1. - tf.linalg.band_part(tf.ones_like(w), -1, 0)
-        # w = tf.boolean_mask(w, _mask)
 
         _losses = 0.
         _n = 0.
