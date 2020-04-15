@@ -10,29 +10,46 @@ import skimage.color
 from utils.cylical_learning_rate import CyclicLR
 from utils._auc import AUC
 
+# global local vars
+TARGET_DATASET_FILENAME = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
+TARGET_DATASET_PATH = CHESTXRAY_DATASET_PATH
+
 if __name__ == "__main__":
     model = model_binaryXE_mid(USE_PATIENT_DATA) if USE_FEATURE_LOSS else model_binaryXE(USE_PATIENT_DATA)
 
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
-                                 use_patient_data=USE_PATIENT_DATA, use_feature_loss=USE_FEATURE_LOSS)
+                                 use_patient_data=USE_PATIENT_DATA, use_feature_loss=USE_FEATURE_LOSS,
+                                 secondary_filename=TARGET_DATASET_FILENAME,
+                                 secondary_dataset_path=TARGET_DATASET_PATH)
     val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                               use_feature_loss=USE_FEATURE_LOSS)
+                               use_feature_loss=USE_FEATURE_LOSS,
+                               secondary_filename=TARGET_DATASET_FILENAME,
+                               secondary_dataset_path=TARGET_DATASET_PATH)
     test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                                use_feature_loss=USE_FEATURE_LOSS)
+                                use_feature_loss=USE_FEATURE_LOSS,
+                                secondary_filename=TARGET_DATASET_FILENAME,
+                                secondary_dataset_path=TARGET_DATASET_PATH)
 
     clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
                    step_size=CLR_PATIENCE * ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
 
     _losses = []
-    if USE_CLASS_WEIGHT:
-        _loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
-    else:
-        _loss = tf.keras.losses.BinaryCrossentropy(from_logits=False)
-    _losses.append(_loss)
+
+    # _XEloss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
+    _XEloss = myBinaryXE(num_classes=NUM_CLASSES, from_logits=False)
+    _losses.append(_XEloss)
 
     if USE_FEATURE_LOSS:
-        _losses.append(FeatureLoss(num_classes=NUM_CLASSES, alpha=FeL_ALPHA))
+        _losses.append(FeatureLoss(num_classes=NUM_CLASSES, alpha=FeL_ALPHA, net_model=model, _feloss_alpha=RATIO_INTRATERTD,
+                                   _index_var=_XEloss.indexs, _index_ones_var=_XEloss.indexs_ones))
+
+    # a = model(np.random.normal(0, 1, (1,224,224,1)))
+    # # test featureloss
+    # a = _losses[1](tf.convert_to_tensor(np.random.choice(2, size=(32, 14), p=[0.5, 0.5]).astype(np.float32)),
+    #                tf.convert_to_tensor(np.random.normal(0, 1, (32, 2048)), dtype=tf.float32))
+    # print(a)
+    # exit()
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
     _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)]}  # give recall for metric it is more accurate
@@ -109,6 +126,7 @@ if __name__ == "__main__":
     cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
     lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
 
+
     class FECallback(tf.keras.callbacks.Callback):
         def __init__(self, pred_loss, feature_loss, base_feature_loss_ratio=0.5):
             super().__init__()
@@ -159,7 +177,7 @@ if __name__ == "__main__":
               epochs=MAX_EPOCHS,
               validation_data=val_dataset,
               initial_epoch=init_epoch,
-              # steps_per_epoch=200,
+              # steps_per_epoch=2,
               callbacks=_callbacks,
               verbose=1)
 

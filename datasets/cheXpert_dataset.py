@@ -6,7 +6,6 @@ The validation should have more or less same amount of data from each diseases.
 Dataset will be stored in tf.data.Dataset. Patient data and image will be combined.
 """
 
-from common_definitions import *
 from datasets.common import *
 import csv
 np.random.seed(666)
