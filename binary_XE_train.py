@@ -162,7 +162,7 @@ if __name__ == "__main__":
     if USE_FEATURE_LOSS:
         _callbacks.append(FECallback(RATIO_LOSSES[0], RATIO_LOSSES[1], base_feature_loss_ratio=BASE_FELOSS_RAT))
 
-    _callbacks.extend([clr if USE_CLR else lrate, tensorboard_cbk, cm_callback, model_ckp, early_stopping])  # callbacks list
+    _callbacks.extend([clr if USE_CLR else lrate, tensorboard_cbk, model_ckp, early_stopping])  # callbacks list
 
 
 
