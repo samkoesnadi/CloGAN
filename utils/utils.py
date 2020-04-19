@@ -22,168 +22,96 @@ def allclose(x, y, rtol=1e-5, atol=1e-8):
     return tf.reduce_all(tf.abs(x - y) <= tf.abs(y) * rtol + atol)
 
 
-def _calc_indexs(_num_classes, _y_true, _epsilon=tf.keras.backend.epsilon()):
+def calc_indexs(_num_classes, _y_true, _epsilon=tf.keras.backend.epsilon()):
     # run process of calculating loss
     keys = tf.eye(_num_classes)
-    _indexs = tf.matmul(_y_true / (tf.norm(_y_true, axis=-1, keepdims=True) + _epsilon),
-                        keys / (tf.norm(keys, axis=-1, keepdims=True) + _epsilon))  # 32 x 14
-    _indexs_ones = tf.matmul(_y_true, keys)  # contains all ones, 32 x 14
+    _indexs = tf.matmul(_y_true, keys)  # contains all ones, 32 x 14
 
-    return _indexs, _indexs_ones
+    return _indexs
 
 
-class myBinaryXE(tf.keras.losses.BinaryCrossentropy):
+class BinaryXE_FeLOSS(tf.keras.losses.BinaryCrossentropy):
     def __init__(self, num_classes=NUM_CLASSES, bs=BATCH_SIZE, *args, **kwargs):
-        super(myBinaryXE, self).__init__(*args, **kwargs)
+        super(BinaryXE_FeLOSS, self).__init__(*args, **kwargs)
         self.num_classes = num_classes
 
-        # for SD. TODO: check if the data actually transferred
+        # for SD.
         self.indexs = tf.Variable(tf.zeros((bs, num_classes)), dtype=tf.float32)
-        self.indexs_ones = tf.Variable(tf.zeros((bs, num_classes)), dtype=tf.float32)
 
     def call(self, y_true, y_pred):
         _bs = tf.shape(y_true)[0]
 
-        _indexs, _indexs_ones = _calc_indexs(self.num_classes, y_true)
+        _indexs, _indexs_ones = calc_indexs(self.num_classes, y_true)
 
         self.indexs[0:_bs].assign(_indexs)
         self.indexs_ones[0:_bs].assign(_indexs_ones)
 
-        return super(myBinaryXE, self).call(y_true, y_pred)
+        return super(BinaryXE_FeLOSS, self).call(y_true, y_pred)
 
 
-class FeatureLoss(tf.keras.losses.Loss):
-    def __init__(self, num_classes=NUM_CLASSES, use_moving_average=True, net_model=None, alpha=.1,
-                 _feloss_alpha=(1, 1, 1), _index_var=None, _index_ones_var=None, **kwargs):
-        super().__init__(**kwargs)
-        if _feloss_alpha is None:
-            _feloss_alpha = [1., 1., 1.]
-        self._mean_features = tf.random.normal((num_classes, 2048))
+class FeatureStrength:
+    """
+    Feature strength class for each "data set"
+    """
+
+    def __init__(self, num_classes, _indexs: tf.Variable, _kalman_update_alpha=1.):
         self._num_classes = num_classes
-        self._alpha = alpha
-        self._moving_average_bool = use_moving_average
+        self._indexs = _indexs
+        self._features_mean = tf.random.normal((num_classes, 2048))
+        self._features_var = tf.random.normal((num_classes, 2048))
+        self._kalman_update_alpha = _kalman_update_alpha
 
-        # for td feLoss, lets make it zero shot
-        self.model = net_model
-        self._feloss_alpha = _feloss_alpha
-        self._feloss_alpha_ones = list(map(lambda x: 1. if x != 0 else 0., self._feloss_alpha))
-        self._td_mean_features = tf.random.normal((num_classes, 2048))
+        self._first_iter = True
 
-        # for sd
-        self._indexs = _index_var
-        self._indexs_ones = _index_ones_var
-
-        self._epsilon = tf.keras.backend.epsilon()  # epsilon of keras
-
-    @tf.function(input_signature=(tf.TensorSpec(shape=[None, None],
-                                                dtype=tf.float32),
-                                  tf.TensorSpec(shape=[None, 2048], dtype=tf.float32)))
-    def call(self, _td_x, _features):
-        _epsilon = self._epsilon
+    # @tf.function(input_signature=(tf.TensorSpec(shape=[None, 2048], dtype=tf.float32),))
+    def __call__(self, _features):
         _num_classes = self._num_classes
         _bs = tf.shape(_features)[0]
+        _indexs = tf.transpose(self._indexs[:_bs])  # nc x bs
 
-        # changed the _td_x shape
-        _td_x = tf.reshape(_td_x, (_bs, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
+        # mean formula is E[X]
+        _features_mean = _indexs @ _features / tf.reduce_sum(_indexs, axis=1, keepdims=True)  # nc, 2048
 
-        # with tf.compat.v1.variable_scope('model', reuse=True):
-        _td_y_pred, _td_features = self.model(_td_x)
+        # variance formula is E[X^2] - E[X]^2
+        _features_var = (_indexs ** 2 @ _features ** 2) / tf.reduce_sum(_indexs, axis=1, keepdims=True) - \
+                        _features_mean ** 2  # nc, 2048
 
-        # calculate the indexs
-        _indexs = self._indexs[0:_bs]
-        _indexs_ones = self._indexs_ones[0:_bs]
-        _td_indexs, _td_indexs_ones = _calc_indexs(_num_classes, _td_y_pred)
-
-        # have the transpose one
-        indexs = tf.transpose(_indexs)[..., None]  # 14 x 32 x 1
-        indexs_ones = tf.transpose(_indexs_ones[0:_bs])[..., None]  # 14 x 32 x 1
-
-        td_indexs = tf.transpose(_td_indexs)[..., None]  # 14 x 32 x 1
-        td_indexs_ones = tf.transpose(_td_indexs_ones)[..., None]  # 14 x 32 x 1
-
-        _mean_features = (indexs_ones[..., 0] @ _features) / (
-                tf.reduce_sum(indexs_ones, axis=1) + _epsilon)  # 14x2048
-        _td_mean_features = (td_indexs_ones[..., 0] @ _td_features) / (
-                tf.reduce_sum(td_indexs_ones, axis=1) + _epsilon)  # 7x2048
-
-        if self._moving_average_bool:
-            # compute the difference between the new mean and the old mean
-            _mean_diff = _mean_features - self._mean_features
-            _td_mean_diff = _td_mean_features - self._td_mean_features
-
-            # update the global mean features
-            self._mean_features = self._mean_features + self._alpha * _mean_diff
-            self._td_mean_features = self._td_mean_features + self._alpha * _td_mean_diff
+        if self._first_iter:
+            self._features_mean = _features_mean
+            self._features_var = _features_var
         else:
-            self._mean_features = _mean_features
-            self._td_mean_features = _td_mean_features
+            self._features_mean = self._features_mean + self._kalman_update_alpha * (
+                        _features_mean - self._features_mean)
+            self._features_var = self._features_var + self._kalman_update_alpha * (_features_var - self._features_var)
+            self._first_iter = False
 
-        # calculate the distance matrix / heat map
-        _diff_features = tf.reduce_sum(
-            _indexs_ones[..., None] * self._mean_features[None, ...], axis=1) / (
-                                 tf.reduce_sum(_indexs_ones[..., None], axis=1) + _epsilon)  # 32x2048
+        mean_strength = tf.linalg.norm(self._features_mean, ord=2, axis=-1)  # the distance to zero
+        var_strength = tf.linalg.norm(tf.ones((self._num_classes, 2048)) - self._features_var, ord=2,
+                                      axis=-1)  # the distance to one
 
-        _centered_features = _features - _diff_features
+        return mean_strength, var_strength
 
-        _td_diff_features = tf.reduce_sum(
-            _td_indexs_ones[..., None] * self._td_mean_features[None, ...], axis=1) / (
-                                    tf.reduce_sum(_td_indexs_ones[..., None], axis=1) + _epsilon)  # 32x2048
 
-        w_inter = pm_W(_diff_features, from_diff=True)  # 32x32
-        w_intra = pm_W(_centered_features, _centered_features)  # 32x32
-        w_td = pm_W(_diff_features, _td_diff_features, from_diff=False)  # 32x32
+def _half_tanh(x):
+    return 1 - tf.exp(-x)
 
-        # if DISTANCE_METRIC == "cosine":
-        #     w = tf.keras.losses.cosine_similarity(_features[:, None, :], _features) + 1
-        # else:
-        #     pass
 
-        # scale it
-        w_inter = 1. - tf.math.exp(-w_inter)
-        w_intra = 1. - tf.math.exp(-w_intra)
-        w_td = 1. - tf.math.exp(-w_td)
+class FeatureMetric(FeatureStrength):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        # calculate w loss ... (further is better)
-        w_inter_loss = - tf.math.log(1. - w_inter + _epsilon)
-        w_intra_loss = - tf.math.log(w_intra + _epsilon)
-        w_td_loss = - tf.math.log(1. - w_td + _epsilon)
+    def __call__(self, *args, **kwargs):
+        _epsilon = tf.keras.backend.epsilon()
 
-        _mask = 1. - tf.linalg.band_part(tf.ones_like(w_inter_loss), -1, 0)
+        raw_mean_s, raw_var_s = super().__call__(*args, **kwargs)
 
-        _losses = 0.
-        _n = 0.
-        for _i in range(_num_classes):
-            # for intra
-            i_c = indexs_ones[_i] @ tf.transpose(indexs[_i])  # bsxbs
-            i_c = (i_c + tf.transpose(i_c)) / 2.
+        # # scale
+        # mean_s, var_s = raw_mean_s / 2048 ** .5, raw_var_s / 2048 ** .5
 
-            # for inter
-            i_nc = 1. - i_c
+        # loss
+        raw_loss = raw_mean_s + raw_var_s
 
-            # for td
-            _i_c_td = td_indexs_ones[_i] @ tf.transpose(indexs[_i])  # bsxbs
-            _i_c_td = _i_c_td + tf.transpose(_i_c_td)  # bsxbs
-            _i_c2_td = indexs_ones[_i] @ tf.transpose(td_indexs[_i])  # bsxbs
-            _i_c2_td = _i_c2_td + tf.transpose(_i_c2_td)  # bsxbs
-
-            i_c_td = (_i_c_td + _i_c2_td) / 2
-
-            # mask the indicator matrices
-
-            i_c_td = i_c_td * _mask
-            i_c = i_c * _mask
-            i_nc = i_nc * _mask
-
-            # calculate the log loss
-            _loss = self._feloss_alpha[2] * w_td_loss * i_c_td + \
-                    self._feloss_alpha[1] * w_inter_loss * i_nc + \
-                    self._feloss_alpha[0] * w_intra_loss * i_c
-            _losses += tf.reduce_sum(_loss)
-            _n += tf.reduce_sum(self._feloss_alpha_ones[2] * i_c_td + \
-                                self._feloss_alpha_ones[1] * i_nc + \
-                                self._feloss_alpha_ones[0] * i_c)
-
-        return _losses / (_n + _epsilon)
+        return raw_loss, (raw_mean_s, raw_var_s)
 
 
 class AUC_five_classes(AUC):

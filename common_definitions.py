@@ -29,18 +29,18 @@ KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 # network model related variable
 USE_SVM = False
 USE_PATIENT_DATA = False
-USE_PATIENT_DATA_OPT_LAYER = False
+USE_WN = False
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 
 # train settings
 # USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
 USE_AUGMENTATION = False
-USE_FEATURE_LOSS = True
+USE_FEATURE_LOSS = False
 USE_CLR = True
 USE_DROPOUT_PAT_DATA = True
 BUFFER_SIZE = 1600
-BATCH_SIZE = 16  # 32 is optimal
+BATCH_SIZE = 32  # 32 is optimal
 MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out

@@ -15,7 +15,7 @@ TARGET_DATASET_FILENAME = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
 TARGET_DATASET_PATH = CHESTXRAY_DATASET_PATH
 
 if __name__ == "__main__":
-    model = model_binaryXE_mid(USE_PATIENT_DATA) if USE_FEATURE_LOSS else model_binaryXE(USE_PATIENT_DATA)
+    model = model_binaryXE_mid(USE_PATIENT_DATA, USE_WN) if USE_FEATURE_LOSS else model_binaryXE(USE_PATIENT_DATA, USE_WN)
 
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
@@ -37,7 +37,8 @@ if __name__ == "__main__":
     _losses = []
 
     # _XEloss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
-    _XEloss = myBinaryXE(num_classes=NUM_CLASSES, from_logits=False)
+    _XEloss = BinaryXE_FeLOSS(num_classes=NUM_CLASSES, from_logits=False) if USE_FEATURE_LOSS else \
+        tf.keras.losses.BinaryCrossentropy(from_logits=False)
     _losses.append(_XEloss)
 
     if USE_FEATURE_LOSS:

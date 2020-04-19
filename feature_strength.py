@@ -1,21 +1,20 @@
 from utils.kwd import *
 from utils.feature_loss import loss_2
-from utils.utils import FeatureLoss
 from utils.welford import Welford
 from datasets.cheXpert_dataset import read_dataset
-from utils.visualization import *
 from models.multi_label import *
 from models.multi_class import model_MC_SVM
 from sklearn.decomposition import PCA
 import sklearn.metrics
 import scipy.spatial
 import scipy
+from utils.utils import *
 
 PRINT_PREDICTION = False
 
 if __name__ == "__main__":
     if not USE_SVM:
-        model = model_binaryXE_mid(use_patient_data=USE_PATIENT_DATA)
+        model = model_binaryXE_mid(use_patient_data=USE_PATIENT_DATA, use_wn=USE_WN)
     else:
         model = model_MC_SVM(with_feature=True)
 
@@ -33,16 +32,20 @@ if __name__ == "__main__":
         use_patient_data=USE_PATIENT_DATA,
         evaluation_mode=True,
         batch_size=TEST_N)
-    # test_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA, use_feature_loss=False, evaluation_mode=True, batch_size=BATCH_SIZE).take(100)
 
     welford_ = Welford()
-    losses3 = 0
-    n = 0
+    _loss_sum = 0.
+    _raw_mean_sum = 0.
+    _raw_var_sum = 0.
+    _loss_n = 0.
+
     # get the ground truth labels
     maxi = -np.inf
     mini = np.inf
     avg_feature = Welford()
-    feature_loss = FeatureLoss(5)
+
+    _index_sd = tf.Variable(tf.zeros((TEST_N, 5)))
+    featureStrength = FeatureMetric(num_classes=5, _indexs=_index_sd)
 
     for i_d, (test_img, test_label) in tqdm(enumerate(test_dataset)):
         _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]
@@ -54,13 +57,20 @@ if __name__ == "__main__":
         maxi = features_np.max() if maxi < features_np.max() else maxi
         mini = features_np.min() if mini > features_np.min() else mini
         avg_feature.update(features_np.mean())
-        # make the dimension smaller
-        # features_np = _pca.fit_transform(features_np)
 
-        # calculate
-        loss = feature_loss(tf.convert_to_tensor(test_label, dtype=tf.float32), tf.convert_to_tensor(features_np, dtype=tf.float32))
-        losses3 += loss
-        n += 1
+        # calculate index
+        _bs = test_label.shape[0]
+        _index_sd[:_bs].assign(calc_indexs(5, test_label))
 
-    print(losses3.numpy() / n)
+        # calculate feature strength
+        raw_loss, (raw_mean_s, raw_var_s) = featureStrength(tf.convert_to_tensor(features_np, dtype=tf.float32))
+
+        _loss_sum += tf.reduce_sum(raw_loss)
+        _raw_mean_sum += tf.reduce_sum(raw_mean_s)
+        _raw_var_sum += tf.reduce_sum(raw_var_s)
+        _loss_n += tf.cast(tf.size(raw_loss), dtype=tf.float32)
+
+    print("Loss", (_loss_sum / _loss_n).numpy())
+    print("Raw mean", (_raw_mean_sum / _loss_n).numpy())
+    print("Raw var", (_raw_var_sum / _loss_n).numpy())
     print("Max val in feature:", maxi, ", mini val in feature:", mini, "avg:", avg_feature)
