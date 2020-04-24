@@ -41,10 +41,6 @@ if __name__ == "__main__":
         tf.keras.losses.BinaryCrossentropy(from_logits=False)
     _losses.append(_XEloss)
 
-    if USE_FEATURE_LOSS:
-        _losses.append(FeatureLoss(num_classes=NUM_CLASSES, alpha=FeL_ALPHA, net_model=model, _feloss_alpha=RATIO_INTRATERTD,
-                                   _index_var=_XEloss.indexs, _index_ones_var=_XEloss.indexs_ones))
-
     # a = model(np.random.normal(0, 1, (1,224,224,1)))
     # # test featureloss
     # a = _losses[1](tf.convert_to_tensor(np.random.choice(2, size=(32, 14), p=[0.5, 0.5]).astype(np.float32)),

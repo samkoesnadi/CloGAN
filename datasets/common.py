@@ -164,6 +164,7 @@ def read_TFRecord(filename, num_class=NUM_CLASSES):
 
 def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_data=False, image_only=True, num_class=14,
                  evaluation_mode=False,
+                 eval_five_cats_index=EVAL_FIVE_CATS_INDEX,
                  shuffle=True,
                  batch_size=BATCH_SIZE,
                  buffer_size=BUFFER_SIZE,
@@ -176,7 +177,7 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
         data["label"]), num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
 
     if evaluation_mode:
-        dataset = dataset.map(lambda image, patient_data, label: (image, patient_data, tf.gather(label, tf.constant(EVAL_FIVE_CATS_INDEX))),
+        dataset = dataset.map(lambda image, patient_data, label: (image, patient_data, tf.gather(label, tf.constant(eval_five_cats_index))),
                               num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
     else:
         if use_augmentation:
@@ -211,8 +212,8 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
 
         dataset = dataset.map(
             lambda ori_data, td_data: (tf.image.rgb_to_grayscale(tf.clip_by_value(ori_data[0], 0, 1)), ori_data[1],
-                                       (ori_data[2], tf.reshape(td_data, [-1]))),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                                       (ori_data[2], td_data)),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE)  # source img, pat data, (source label, target img)
     else:
         dataset = dataset.map(
             lambda x, patient_data, label: (tf.image.rgb_to_grayscale(tf.clip_by_value(x, 0, 1)), patient_data,

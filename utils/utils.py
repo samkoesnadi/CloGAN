@@ -57,8 +57,8 @@ class FeatureStrength:
     def __init__(self, num_classes, _indexs: tf.Variable, _kalman_update_alpha=1.):
         self._num_classes = num_classes
         self._indexs = _indexs
-        self._features_mean = tf.random.normal((num_classes, 2048))
-        self._features_var = tf.random.normal((num_classes, 2048))
+        self.features_mean = tf.random.normal((num_classes, 2048))
+        self.features_var = tf.random.normal((num_classes, 2048))
         self._kalman_update_alpha = _kalman_update_alpha
 
         self._first_iter = True
@@ -77,19 +77,20 @@ class FeatureStrength:
                         _features_mean ** 2  # nc, 2048
 
         if self._first_iter:
-            self._features_mean = _features_mean
-            self._features_var = _features_var
+            self.features_mean = _features_mean
+            self.features_var = _features_var
         else:
-            self._features_mean = self._features_mean + self._kalman_update_alpha * (
-                        _features_mean - self._features_mean)
-            self._features_var = self._features_var + self._kalman_update_alpha * (_features_var - self._features_var)
+            self.features_mean = self.features_mean + self._kalman_update_alpha * (
+                        _features_mean - self.features_mean)
+            self.features_var = self.features_var + self._kalman_update_alpha * (_features_var - self.features_var)
             self._first_iter = False
 
-        mean_strength = tf.linalg.norm(self._features_mean, ord=2, axis=-1)  # the distance to zero
-        var_strength = tf.linalg.norm(tf.ones((self._num_classes, 2048)) - self._features_var, ord=2,
+        mean_strength = tf.linalg.norm(self.features_mean, ord=2, axis=-1)  # the distance to zero
+        var_strength = tf.linalg.norm(tf.ones((self._num_classes, 2048)) - self.features_var, ord=2,
                                       axis=-1)  # the distance to one
+        inter_mean_strength = tf.linalg.norm(self.features_mean[None, ...] - self.features_mean[:, None, ...], ord=2, axis=-1)  # the distance to each other
 
-        return mean_strength, var_strength
+        return mean_strength, var_strength, tf.reduce_sum(inter_mean_strength, axis=-1)
 
 
 def _half_tanh(x):
@@ -103,15 +104,15 @@ class FeatureMetric(FeatureStrength):
     def __call__(self, *args, **kwargs):
         _epsilon = tf.keras.backend.epsilon()
 
-        raw_mean_s, raw_var_s = super().__call__(*args, **kwargs)
+        raw_mean_s, raw_var_s, raw_imean_s = super().__call__(*args, **kwargs)
 
         # # scale
         # mean_s, var_s = raw_mean_s / 2048 ** .5, raw_var_s / 2048 ** .5
 
         # loss
-        raw_loss = raw_mean_s + raw_var_s
+        raw_loss = raw_mean_s + raw_var_s + raw_imean_s
 
-        return raw_loss, (raw_mean_s, raw_var_s)
+        return raw_loss, (raw_mean_s, raw_var_s, raw_imean_s)
 
 
 class AUC_five_classes(AUC):

@@ -36,8 +36,12 @@ if __name__ == "__main__":
     welford_ = Welford()
     _loss_sum = 0.
     _raw_mean_sum = 0.
+    _raw_imean_sum = 0.
     _raw_var_sum = 0.
     _loss_n = 0.
+
+    _label_entropy_sum = 0.
+    _label_entropy_n = 0.
 
     # get the ground truth labels
     maxi = -np.inf
@@ -49,7 +53,6 @@ if __name__ == "__main__":
 
     for i_d, (test_img, test_label) in tqdm(enumerate(test_dataset)):
         _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]
-        # if _batch_to_fill != BATCH_SIZE: continue  # TODO: this is just temporary ugly fix
 
         # Evaluate the model on the test data usin  g `evaluate`
         predictions = model.predict(test_img)
@@ -58,19 +61,31 @@ if __name__ == "__main__":
         mini = features_np.min() if mini > features_np.min() else mini
         avg_feature.update(features_np.mean())
 
+        # label's entropy
+        _predict_label = predictions[0]
+        _label_entropy = (_predict_label * tf.math.log(_predict_label + tf.keras.backend.epsilon()) +
+                          (1 - _predict_label) * tf.math.log(1. - _predict_label + tf.keras.backend.epsilon())) / \
+                         tf.math.log(.5)
+        _label_entropy_sum += tf.reduce_sum(_label_entropy)
+        _label_entropy_n += tf.cast(tf.size(_label_entropy), dtype=tf.float32)
+
         # calculate index
         _bs = test_label.shape[0]
-        _index_sd[:_bs].assign(calc_indexs(5, test_label))
+        _index_sd[:_bs].assign(calc_indexs(5, _predict_label[..., EVAL_FIVE_CATS_INDEX]))
+        # _index_sd[:_bs].assign(calc_indexs(5, test_label))
 
         # calculate feature strength
-        raw_loss, (raw_mean_s, raw_var_s) = featureStrength(tf.convert_to_tensor(features_np, dtype=tf.float32))
+        raw_loss, (raw_mean_s, raw_var_s, raw_imean_s) = featureStrength(tf.convert_to_tensor(features_np, dtype=tf.float32))
 
         _loss_sum += tf.reduce_sum(raw_loss)
         _raw_mean_sum += tf.reduce_sum(raw_mean_s)
+        _raw_imean_sum += tf.reduce_sum(raw_imean_s)
         _raw_var_sum += tf.reduce_sum(raw_var_s)
         _loss_n += tf.cast(tf.size(raw_loss), dtype=tf.float32)
 
     print("Loss", (_loss_sum / _loss_n).numpy())
     print("Raw mean", (_raw_mean_sum / _loss_n).numpy())
+    print("Raw imean", (_raw_imean_sum / _loss_n).numpy())
     print("Raw var", (_raw_var_sum / _loss_n).numpy())
+    print("Label entropy", (_label_entropy_sum / _label_entropy_n).numpy())
     print("Max val in feature:", maxi, ", mini val in feature:", mini, "avg:", avg_feature)
