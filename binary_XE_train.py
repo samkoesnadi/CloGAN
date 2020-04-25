@@ -10,26 +10,17 @@ import skimage.color
 from utils.cylical_learning_rate import CyclicLR
 from utils._auc import AUC
 
-# global local vars
-TARGET_DATASET_FILENAME = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
-TARGET_DATASET_PATH = CHESTXRAY_DATASET_PATH
 
 if __name__ == "__main__":
-    model = model_binaryXE_mid(USE_PATIENT_DATA, USE_WN) if USE_FEATURE_LOSS else model_binaryXE(USE_PATIENT_DATA, USE_WN)
+    model = model_binaryXE(USE_PATIENT_DATA, USE_WN)
 
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
-                                 use_patient_data=USE_PATIENT_DATA, use_feature_loss=USE_FEATURE_LOSS,
-                                 secondary_filename=TARGET_DATASET_FILENAME,
-                                 secondary_dataset_path=TARGET_DATASET_PATH)
+                                 use_patient_data=USE_PATIENT_DATA, use_feature_loss=False)
     val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                               use_feature_loss=USE_FEATURE_LOSS,
-                               secondary_filename=TARGET_DATASET_FILENAME,
-                               secondary_dataset_path=TARGET_DATASET_PATH)
+                               use_feature_loss=False)
     test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                                use_feature_loss=USE_FEATURE_LOSS,
-                                secondary_filename=TARGET_DATASET_FILENAME,
-                                secondary_dataset_path=TARGET_DATASET_PATH)
+                                use_feature_loss=False)
 
     clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
                    step_size=CLR_PATIENCE * ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
@@ -37,27 +28,19 @@ if __name__ == "__main__":
     _losses = []
 
     # _XEloss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
-    _XEloss = BinaryXE_FeLOSS(num_classes=NUM_CLASSES, from_logits=False) if USE_FEATURE_LOSS else \
-        tf.keras.losses.BinaryCrossentropy(from_logits=False)
+    _XEloss = tf.keras.losses.BinaryCrossentropy(from_logits=False)
     _losses.append(_XEloss)
-
-    # a = model(np.random.normal(0, 1, (1,224,224,1)))
-    # # test featureloss
-    # a = _losses[1](tf.convert_to_tensor(np.random.choice(2, size=(32, 14), p=[0.5, 0.5]).astype(np.float32)),
-    #                tf.convert_to_tensor(np.random.normal(0, 1, (32, 2048)), dtype=tf.float32))
-    # print(a)
-    # exit()
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
     _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)]}  # give recall for metric it is more accurate
 
     model_ckp = tf.keras.callbacks.ModelCheckpoint(MODELCKP_PATH,
-                                                   monitor="val_predictions_auc" if USE_FEATURE_LOSS else "val_auc",
+                                                   monitor="val_auc",
                                                    verbose=1,
                                                    save_best_only=MODELCKP_BEST_ONLY,
                                                    save_weights_only=True,
                                                    mode="max")
-    early_stopping = tf.keras.callbacks.EarlyStopping(monitor="val_predictions_auc" if USE_FEATURE_LOSS else 'val_auc',
+    early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_auc',
                                                       verbose=1,
                                                       patience=int(CLR_PATIENCE * 2.5),
                                                       mode='max',
@@ -87,14 +70,11 @@ if __name__ == "__main__":
         else:
             prediction = model.predict(image)[0]
 
-        if USE_FEATURE_LOSS:
-            prediction = prediction[0]
-
         prediction_dict = {LABELS_KEY[i]: prediction[i] for i in range(NUM_CLASSES)}
 
         lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
-        gradcampps = Xception_gradcampp(model, image, patient_data=patient_data, use_feature_loss=USE_FEATURE_LOSS)
+        gradcampps = Xception_gradcampp(model, image, patient_data=patient_data, use_feature_loss=False)
 
         results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
@@ -123,48 +103,11 @@ if __name__ == "__main__":
     cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
     lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
 
-
-    class FECallback(tf.keras.callbacks.Callback):
-        def __init__(self, pred_loss, feature_loss, base_feature_loss_ratio=0.5):
-            super().__init__()
-            self.pred_loss = pred_loss
-            self.feature_loss = feature_loss
-            self.base_feature_loss_ratio = base_feature_loss_ratio
-
-            self._lowest_pred_loss = 0.
-
-        # customize your behavior
-        def on_train_batch_end(self, batch, logs=None):
-            _cur_pred_loss = logs["predictions_loss"]
-            # _cur_feat_loss = logs["tf_op_layer_image_feature_vectors_loss"]
-
-            if batch == 0:
-                self._lowest_pred_loss = _cur_pred_loss
-
-            # self.feature_loss.assign(min((self._lowest_pred_loss / _cur_pred_loss), 1.) ** 2 * self.base_feature_loss_ratio)
-
-            # TODO: check if this is valid
-            if self._lowest_pred_loss < _cur_pred_loss:
-                self.feature_loss.assign(0.)
-            else:
-                self.feature_loss.assign(self.base_feature_loss_ratio)
-
-            logs["rat_feL"] = self.feature_loss
-
-            # update the lowerst pred loss
-            self._lowest_pred_loss = self._lowest_pred_loss + UPDATE_LOSS_SCHEDULER_ALPHA * (_cur_pred_loss - self._lowest_pred_loss)
-
-    _callbacks = []
-
-    if USE_FEATURE_LOSS:
-        _callbacks.append(FECallback(RATIO_LOSSES[0], RATIO_LOSSES[1], base_feature_loss_ratio=BASE_FELOSS_RAT))
-
-    _callbacks.extend([clr if USE_CLR else lrate, tensorboard_cbk, model_ckp, early_stopping])  # callbacks list
+    _callbacks = [clr if USE_CLR else lrate, tensorboard_cbk, model_ckp, early_stopping]  # callbacks list
 
     model.compile(optimizer=_optimizer,
                   loss=_losses,
-                  metrics=_metrics,
-                  loss_weights={"predictions": RATIO_LOSSES[0], "tf_op_layer_image_feature_vectors": RATIO_LOSSES[1]} if USE_FEATURE_LOSS else {"predictions": 1}
+                  metrics=_metrics
                   )
 
     # start training

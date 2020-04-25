@@ -196,7 +196,7 @@ if __name__ == "__main__":
 
 
     # initiate worker
-    trainWorker = TrainWorker(_metric)
+    trainWorker = TrainWorker(_metric, reg_lambda=REG_LAMBDA, n_critic=N_CRITIC)
 
     ## find initial epoch and load the weights too
     init_epoch = 0

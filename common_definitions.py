@@ -47,6 +47,8 @@ LEARNING_RATE = 1e-4
 
 # for training domAdap
 USE_GAN = False
+REG_LAMBDA = 10.
+N_CRITIC = 5
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
