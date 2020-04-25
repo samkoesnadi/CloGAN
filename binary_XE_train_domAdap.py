@@ -1,18 +1,15 @@
 """
 Train normal model with binary XE as loss function
 """
-from common_definitions import *
-from datasets.cheXpert_dataset import read_dataset, read_image_and_preprocess
-from utils.utils import *
-from utils.visualization import *
-from models.multi_label import *
-import skimage.color
-from utils.cylical_learning_rate import CyclicLR
-from utils._auc import AUC
-from _callbacks import get_callbacks
-from models.discriminator import make_discriminator_model
-from tqdm import tqdm
 from tensorflow.python.keras.callbacks import configure_callbacks
+from tqdm import tqdm
+
+from _callbacks import get_callbacks
+from datasets.cheXpert_dataset import read_dataset
+from models.discriminator import make_discriminator_model
+from models.multi_label import *
+from utils._auc import AUC
+from utils.visualization import *
 
 # global local vars
 TARGET_DATASET_FILENAME = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
@@ -20,7 +17,9 @@ TARGET_DATASET_PATH = CHESTXRAY_DATASET_PATH
 
 if __name__ == "__main__":
     model = model_binaryXE_mid(USE_PATIENT_DATA, USE_WN)
-    discriminator = make_discriminator_model()
+
+    if USE_GAN:
+        discriminator = make_discriminator_model()
 
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
@@ -93,13 +92,13 @@ if __name__ == "__main__":
         return cross_entropy(tf.ones_like(source_output), source_output) + cross_entropy(tf.zeros_like(target_output),
                                                                                          target_output)
 
-
-    # save checkpoints
-    checkpoint_dir = './checkpoints/disc'
-    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-    checkpoint = tf.train.Checkpoint(generator_optimizer=_optimizer,
-                                     discriminator_optimizer=_optimizer_disc,
-                                     discriminator=discriminator)
+    if USE_GAN:
+        # save checkpoints
+        checkpoint_dir = './checkpoints/disc'
+        checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+        checkpoint = tf.train.Checkpoint(generator_optimizer=_optimizer,
+                                         discriminator_optimizer=_optimizer_disc,
+                                         discriminator=discriminator)
 
 
     class TrainWorker:
@@ -114,7 +113,7 @@ if __name__ == "__main__":
         # Notice the use of `tf.function`
         # This annotation causes the function to be "compiled".
         @tf.function
-        def train_step(self, source_image_batch, source_label_batch, target_image_batch, bs):
+        def gan_train_step(self, source_image_batch, source_label_batch, target_image_batch, bs):
             _eps = tf.random.uniform((bs, 1))  # normal random
             with tf.GradientTape(persistent=True) as g:
                 source_predictions = model(source_image_batch, training=True)
@@ -161,12 +160,39 @@ if __name__ == "__main__":
             _optimizer_disc.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
             _optimizer.apply_gradients(zip(gradients_of_xe_gen, model.trainable_variables))
 
-
             # calculate metrics
             self.metric.update_state(source_label_batch, source_predictions[0])
 
             del g  # delete the persisten gradientTape
             return xe_loss, gen_loss, disc_loss
+
+        @tf.function
+        def mmd_train_step(self, source_image_batch, source_label_batch, target_image_batch, bs):
+            with tf.GradientTape(persistent=True) as g:
+                source_predictions = model(source_image_batch, training=True)
+                target_predictions = model(target_image_batch, training=True)
+
+                # notation based on MMD formula
+                phi_xs = tf.reduce_mean(source_predictions[1], axis=0)
+                phi_xt = tf.reduce_mean(target_predictions[1], axis=0)
+
+                # calculate losses
+                xe_loss = _XEloss(source_label_batch, source_predictions[0])
+                dksq = tf.linalg.norm(phi_xs - phi_xt) ** 2
+
+                total_loss = xe_loss + dksq
+
+            # gradients_of_xe = gen_tape.gradient(xe_loss, model.trainable_variables)
+            # gradients_of_generator = gen_tape.gradient(gen_loss, model.trainable_variables)
+            gradients_of_xe_gen = g.gradient(total_loss, model.trainable_variables)
+
+            _optimizer.apply_gradients(zip(gradients_of_xe_gen, model.trainable_variables))
+
+            # calculate metrics
+            self.metric.update_state(source_label_batch, source_predictions[0])
+
+            del g  # delete the persisten gradientTape
+            return xe_loss, dksq, 0.
 
 
     # initiate worker
@@ -182,7 +208,8 @@ if __name__ == "__main__":
             print("[Load weight] No weight is found")
 
     # load disc and optimizer checkpoints
-    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    if USE_GAN:
+        checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
 
     # training loop
     _callbackList.on_train_begin()
@@ -199,8 +226,10 @@ if __name__ == "__main__":
                     train_dataset):
                 _batch_size = tf.shape(source_image_batch)[0].numpy()
                 _callbackList.on_batch_begin(i_batch, {"size": _batch_size})  # on batch begin
-                xe_loss, gen_loss, disc_loss = trainWorker.train_step(source_image_batch, source_label_batch,
-                                                                      target_image_batch, _batch_size)
+
+                g = trainWorker.gan_train_step if USE_GAN else trainWorker.mmd_train_step
+                xe_loss, gen_loss, disc_loss = g(source_image_batch, source_label_batch,
+                                                 target_image_batch, _batch_size)
                 _auc = trainWorker.metric.result().numpy()
 
                 # update tqdm
@@ -223,12 +252,12 @@ if __name__ == "__main__":
         trainWorker.metric.reset_states()
 
         # save checkpoint
-        if _auc > _global_auc:
-            _global_auc = _auc
-            checkpoint.save(file_prefix=checkpoint_prefix)
+        if USE_GAN:
+            if _auc > _global_auc:
+                _global_auc = _auc
+                checkpoint.save(file_prefix=checkpoint_prefix)
 
     _callbackList.on_train_end()
-    tf.keras.models.Model
 
     # Evaluate the model on the test data using `evaluate`
     results = model.evaluate(test_dataset)
