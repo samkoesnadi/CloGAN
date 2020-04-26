@@ -6,7 +6,7 @@ from utils.weightnorm import WeightNormalization
 
 def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
     input_layer = tf.keras.layers.Input(shape=(IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1), name="input_img")
-    image_section_model = tf.keras.applications.xception.Xception(include_top=False, weights=None, pooling="avg",
+    image_section_model = tf.keras.applications.xception.Xception(include_top=False, weights=None, pooling=None,
                                                                   input_tensor=input_layer)
     image_feature_vectors = image_section_model.output
 
@@ -26,7 +26,7 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
     else:
         feature_vectors = image_feature_vectors
 
-    image_section_layer = feature_vectors
+    image_section_layer = tf.keras.layers.GlobalAveragePooling2D()(feature_vectors)
 
     if USE_CONV1D:
         image_section_layer = tf.expand_dims(image_section_layer, -1)
@@ -58,9 +58,9 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
         output_layer = tf.keras.layers.Activation("sigmoid", dtype='float32', name='predictions')(output_layer_dense(image_section_layer))
 
     if use_patient_data:
-        return (input_layer, input_semantic), output_layer, image_feature_vectors
+        return (input_layer, input_semantic), output_layer, feature_vectors
     else:
-        return input_layer, output_layer, image_feature_vectors
+        return input_layer, output_layer, feature_vectors
 
 
 def model_binaryXE(use_patient_data=False, use_wn=USE_WN):
