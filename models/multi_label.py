@@ -16,7 +16,7 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
 
     if use_patient_data:
         # process semantic
-        input_semantic = tf.keras.layers.Input(shape=4, name="input_semantic")
+        input_semantic = tf.keras.layers.Input(shape=PAT_DATA_SIZE, name="input_semantic")
 
         # Apply Batch Normalization to convert the range ro mean 0 and std 1
         int_semantic = tf.keras.layers.BatchNormalization()(input_semantic)
@@ -27,6 +27,21 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
         feature_vectors = image_feature_vectors
 
     image_section_layer = feature_vectors
+
+    if USE_CONV1D:
+        image_section_layer = tf.expand_dims(image_section_layer, -1)
+        model = tf.keras.Sequential()
+        model.add(tf.keras.layers.Conv1D(1, 5))
+        model.add(tf.keras.layers.BatchNormalization())
+        model.add(tf.keras.layers.LeakyReLU())
+
+        model.add(tf.keras.layers.Conv1D(1, 5))
+        model.add(tf.keras.layers.BatchNormalization())
+        model.add(tf.keras.layers.LeakyReLU())
+
+        model.add(tf.keras.layers.Flatten())
+
+        image_section_layer = model(image_section_layer)
 
     # add dropout if needed
     if DROPOUT_N != 0.:

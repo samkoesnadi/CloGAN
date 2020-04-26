@@ -30,13 +30,16 @@ KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_SVM = False
 USE_PATIENT_DATA = False
 USE_WN = False
+USE_CONV1D = True
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
+PAT_DATA_SIZE = 4
+NUM_FEATURES = 2048 + (PAT_DATA_SIZE if USE_PATIENT_DATA else 0)
 
 # train settings
 # USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
 USE_AUGMENTATION = False
-USE_CLR = True
+USE_CLR = False
 USE_DROPOUT_PAT_DATA = True
 BUFFER_SIZE = 1600
 BATCH_SIZE = 32  # 32 is optimal
