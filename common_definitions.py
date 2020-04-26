@@ -36,7 +36,6 @@ TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 # USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = True
 USE_AUGMENTATION = False
-USE_FEATURE_LOSS = False
 USE_CLR = True
 USE_DROPOUT_PAT_DATA = True
 BUFFER_SIZE = 1600
@@ -46,23 +45,12 @@ LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
-USE_GAN = False
-REG_LAMBDA = 10.
-N_CRITIC = 5
+USE_GAN = True
+LAMBDA_ADV = 0.125
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
 AUC_INTERP_TOGGLE = False  # activate AUC interp
-
-# for feature loss
-BASE_FELOSS_RAT = 1.
-RATIO_LOSSES = [tf.Variable(1., dtype=tf.float32),
-                tf.Variable(BASE_FELOSS_RAT, dtype=tf.float32)]  # only if feature loss is on... ratio between binaryXE and feature loss. Please be careful with the gradients before image_feature_vector
-DISTANCE_METRIC = "custom"  # "cosine" or "custom"
-FeL_ALPHA = .1
-UPDATE_LOSS_SCHEDULER_ALPHA = .05
-# RATIO_INTRATERSD = [.125, .25, .25]  # ratio intra, inter, td
-RATIO_INTRATERTD = [0., 0., .25]  # ratio intra, inter, td
 
 # target dataset FeLoss conf
 LABELS_COUPLE_INDEX = [

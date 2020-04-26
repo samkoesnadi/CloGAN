@@ -3,7 +3,7 @@ import glob
 import re
 import numpy as np
 from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NUM_CLASSES, CLR_MAXLR, CLR_BASELR, \
-    CLR_PATIENCE, TRAIN_FIVE_CATS_INDEX, EVAL_FIVE_CATS_INDEX, DISTANCE_METRIC, LABELS_COUPLE_INDEX, BATCH_SIZE
+    CLR_PATIENCE, TRAIN_FIVE_CATS_INDEX, EVAL_FIVE_CATS_INDEX, LABELS_COUPLE_INDEX, BATCH_SIZE
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
 from utils._auc import AUC

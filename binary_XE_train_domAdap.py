@@ -36,8 +36,8 @@ if __name__ == "__main__":
     _XEloss = tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.AUTO)
 
     # optimizer
-    _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True, beta_1=0.5, beta_2=0.9)  # TODO
-    _optimizer_disc = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True, beta_1=0.5, beta_2=0.9)
+    _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
+    _optimizer_disc = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
 
     _metric = AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)  # give recall for metric it is more accurate
     _callbacks = get_callbacks()
@@ -92,6 +92,16 @@ if __name__ == "__main__":
         return cross_entropy(tf.ones_like(source_output), source_output) + cross_entropy(tf.zeros_like(target_output),
                                                                                          target_output)
 
+    def disc_gen_loss(source_output, target_output):
+        _one_matrix = tf.ones_like(target_output)
+        _zero_matrix = tf.zeros_like(target_output)
+        gen_loss = cross_entropy(_one_matrix, source_output) + cross_entropy(_zero_matrix, target_output)
+        # gen_loss = cross_entropy(_zero_matrix, target_output)  # TODO
+        disc_loss = cross_entropy(_zero_matrix, source_output) + cross_entropy(_one_matrix, target_output)
+
+        return gen_loss, disc_loss
+
+
     if USE_GAN:
         # save checkpoints
         checkpoint_dir = './checkpoints/disc'
@@ -102,55 +112,28 @@ if __name__ == "__main__":
 
 
     class TrainWorker:
-        def __init__(self, metric, reg_lambda=10., n_critic=5):
+        def __init__(self, metric, lambda_adv=0.001):
             self.metric = metric
-            self.reg_lambda = reg_lambda  # this is for improved W-Gan
-            self.n_critic = n_critic
-
-            # updating var
-            self.t_critic = 0
+            self.lambda_adv = lambda_adv
 
         # Notice the use of `tf.function`
         # This annotation causes the function to be "compiled".
         @tf.function
         def gan_train_step(self, source_image_batch, source_label_batch, target_image_batch, bs):
             _eps = tf.random.uniform((bs, 1))  # normal random
+
             with tf.GradientTape(persistent=True) as g:
                 source_predictions = model(source_image_batch, training=True)
                 target_predictions = model(target_image_batch, training=True)
 
                 # input the predicted feature to the discriminator
-                source_output = tf.reduce_mean(discriminator(source_predictions[1], training=True))
-                target_output = tf.reduce_mean(discriminator(target_predictions[1], training=True))
-
-                # x_tricap from the paper
-                x_tricap = _eps * target_predictions[1] + (1 - _eps) * source_predictions[1]
-                g.watch(x_tricap)
-
-                # d grad for regularizer
-                _d_grad = g.gradient(discriminator(x_tricap), x_tricap)
-                _d_slopes = tf.sqrt(tf.reduce_sum(
-                    tf.square(_d_grad), axis=1))
-
-                disc_loss_unreg = target_output - source_output
-                disc_loss = disc_loss_unreg + self.reg_lambda * tf.reduce_mean((_d_slopes - 1.) ** 2)
-
-                # # calculate losses
-                # xe_loss = _XEloss(source_label_batch, source_predictions[0])
-                # gen_loss = generator_loss(source_output, target_output)
-                # xe_gen_loss = xe_loss + gen_loss  # TODO
-                # disc_loss = discriminator_loss(source_output, target_output)
+                source_output = discriminator(source_predictions[1], training=True)
+                target_output = discriminator(target_predictions[1], training=True)
 
                 # calculate losses
                 xe_loss = _XEloss(source_label_batch, source_predictions[0])
-                gen_loss = -disc_loss_unreg
-
-                if self.t_critic < (self.n_critic - 1):
-                    xe_gen_loss = xe_loss
-                    self.t_critic += 1
-                else:
-                    xe_gen_loss = xe_loss + gen_loss
-                    self.t_critic = 0
+                gen_loss, disc_loss = disc_gen_loss(source_output, target_output)
+                xe_gen_loss = xe_loss + self.lambda_adv * gen_loss
 
             # gradients_of_xe = gen_tape.gradient(xe_loss, model.trainable_variables)
             # gradients_of_generator = gen_tape.gradient(gen_loss, model.trainable_variables)
@@ -163,8 +146,16 @@ if __name__ == "__main__":
             # calculate metrics
             self.metric.update_state(source_label_batch, source_predictions[0])
 
-            del g  # delete the persisten gradientTape
-            return xe_loss, gen_loss, disc_loss
+            del g  # delete the persistent gradientTape
+
+            # calculate label entropy
+            _label_entropy = (source_predictions[0] * tf.math.log(source_predictions[0] + tf.keras.backend.epsilon()) +
+                              (1 - source_predictions[0]) * tf.math.log(
+                        1. - source_predictions[0] + tf.keras.backend.epsilon())) / \
+                             tf.math.log(.5)
+            _label_entropy = tf.reduce_mean(_label_entropy)  # do not run gradient here
+
+            return xe_loss, gen_loss, disc_loss, xe_gen_loss, _label_entropy
 
         @tf.function
         def mmd_train_step(self, source_image_batch, source_label_batch, target_image_batch, bs):
@@ -180,7 +171,7 @@ if __name__ == "__main__":
                 xe_loss = _XEloss(source_label_batch, source_predictions[0])
                 dksq = tf.linalg.norm(phi_xs - phi_xt) ** 2
 
-                total_loss = xe_loss + dksq
+                total_loss = xe_loss + self.lambda_adv * dksq
 
             # gradients_of_xe = gen_tape.gradient(xe_loss, model.trainable_variables)
             # gradients_of_generator = gen_tape.gradient(gen_loss, model.trainable_variables)
@@ -196,7 +187,7 @@ if __name__ == "__main__":
 
 
     # initiate worker
-    trainWorker = TrainWorker(_metric, reg_lambda=REG_LAMBDA, n_critic=N_CRITIC)
+    trainWorker = TrainWorker(_metric, lambda_adv=LAMBDA_ADV)
 
     ## find initial epoch and load the weights too
     init_epoch = 0
@@ -221,14 +212,14 @@ if __name__ == "__main__":
         print("Epoch %d/%d" % (epoch + 1, fit_params["epochs"]))
         _callbackList.on_epoch_begin(epoch)  # on epoch start
         with tqdm(total=math.ceil(TRAIN_N / BATCH_SIZE),
-                  postfix=[dict(xe_loss=np.inf, gen_loss=np.inf, disc_loss=np.inf, AUC=0.)]) as t:
+                  postfix=[dict(xe_loss=np.inf, gen_loss=np.inf, disc_loss=np.inf, xe_gen_loss=np.inf, lab_ent=np.inf, AUC=0.)]) as t:
             for i_batch, (source_image_batch, (source_label_batch, target_image_batch)) in enumerate(
                     train_dataset):
                 _batch_size = tf.shape(source_image_batch)[0].numpy()
                 _callbackList.on_batch_begin(i_batch, {"size": _batch_size})  # on batch begin
 
                 g = trainWorker.gan_train_step if USE_GAN else trainWorker.mmd_train_step
-                xe_loss, gen_loss, disc_loss = g(source_image_batch, source_label_batch,
+                xe_loss, gen_loss, disc_loss, xe_gen_loss, label_entropy = g(source_image_batch, source_label_batch,
                                                  target_image_batch, _batch_size)
                 _auc = trainWorker.metric.result().numpy()
 
@@ -236,6 +227,8 @@ if __name__ == "__main__":
                 t.postfix[0]["xe_loss"] = xe_loss.numpy()
                 t.postfix[0]["gen_loss"] = gen_loss.numpy()
                 t.postfix[0]["disc_loss"] = disc_loss.numpy()
+                t.postfix[0]["xe_gen_loss"] = xe_gen_loss.numpy()
+                t.postfix[0]["lab_ent"] = label_entropy.numpy()
                 t.postfix[0]["AUC"] = _auc
                 t.update()
 
@@ -245,8 +238,13 @@ if __name__ == "__main__":
         print()
         print("Validating...")
         results = model.evaluate(val_dataset, callbacks=_callbacks)
-        _callbackList.on_epoch_end(epoch, {"loss": xe_loss.numpy(), "auc": _auc, "val_loss": results[0],
-                                           "val_auc": results[2], "lr": model.optimizer.lr})  # on epoch end
+        _callbackList.on_epoch_end(epoch, {"loss": xe_loss.numpy(),
+                                           "gen_loss": gen_loss.numpy(),
+                                           "disc_loss": disc_loss.numpy(),
+                                           "auc": _auc,
+                                           "val_loss": results[0],
+                                           "val_auc": results[2],
+                                           "lr": model.optimizer.lr})  # on epoch end
 
         # reset states
         trainWorker.metric.reset_states()

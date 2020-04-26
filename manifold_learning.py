@@ -27,11 +27,11 @@ if __name__ == "__main__":
         CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
         CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, evaluation_mode=True, use_patient_data=USE_PATIENT_DATA)
 
-    _test_n = CHEXPERT_TEST_N if EVAL_CHEXPERT else CHESTXRAY_TEST_N
+    _test_n = CHEXPERT_TEST_N  # TODO
 
     _color_label = None
     _feature_nps = []
-    for i_test, (input, label) in tqdm(enumerate(test_dataset)):
+    for i_test, (input, label) in tqdm(enumerate(test_dataset.take(_test_n))):
         predictions = model.predict(input)
 
         label = (predictions[0][:, TRAIN_FIVE_CATS_INDEX] >= 0.3).astype(np.float32) if PRINT_PREDICTION else label.numpy()
