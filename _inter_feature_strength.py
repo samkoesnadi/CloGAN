@@ -57,7 +57,7 @@ if __name__ == "__main__":
 
         # Evaluate the model on the test data usin  g `evaluate`
         predictions = model.predict(test_img)
-        features_np = predictions[1]  # without actual label
+        features_np = tf.reduce_mean(predictions[1], axis=[1,2])  # without actual label
 
         # calculate index
         _bs = test_label.shape[0]
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
         # Evaluate the model on the test data usin  g `evaluate`
         predictions = model.predict(test_img)
-        features_np = predictions[1]  # without actual label
+        features_np = tf.reduce_mean(predictions[1], axis=[1,2])  # without actual label
 
         # calculate index
         _bs = test_label.shape[0]

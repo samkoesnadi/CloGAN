@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
         # Evaluate the model on the test data usin  g `evaluate`
         predictions = model.predict(test_img)
-        features_np = predictions[1]  # without actual label
+        features_np = tf.reduce_mean(predictions[1], axis=[1,2])  # without actual label
         maxi = features_np.max() if maxi < features_np.max() else maxi
         mini = features_np.min() if mini > features_np.min() else mini
         avg_feature.update(features_np.mean())

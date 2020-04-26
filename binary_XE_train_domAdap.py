@@ -133,8 +133,8 @@ if __name__ == "__main__":
                 # calculate losses
                 xe_loss = _XEloss(source_label_batch, source_predictions[0])
                 gen_loss, disc_loss = disc_gen_loss(source_output, target_output)
-                xe_gen_loss = xe_loss + self.lambda_adv * gen_loss
-                # xe_gen_loss = xe_loss
+                # xe_gen_loss = xe_loss + self.lambda_adv * gen_loss
+                xe_gen_loss = xe_loss
 
             # gradients_of_xe = gen_tape.gradient(xe_loss, model.trainable_variables)
             # gradients_of_generator = gen_tape.gradient(gen_loss, model.trainable_variables)
