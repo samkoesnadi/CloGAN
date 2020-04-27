@@ -10,6 +10,10 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
                                                                   input_tensor=input_layer)
     image_feature_vectors = image_section_model.output
 
+    # add dropout if needed
+    if DROPOUT_N != 0.:
+        image_feature_vectors = tf.keras.layers.Dropout(DROPOUT_N)(image_feature_vectors)
+
     # # add regularizer as the experiments show that it results positively when the avg value of image_feature_vectors is small
     # image_feature_vectors = tf.keras.layers.ActivityRegularization(l2=ACTIVIY_REGULARIZER_VAL)(image_feature_vectors)
     image_feature_vectors = tf.identity(image_feature_vectors, name="image_feature_vectors")  # to change the name
@@ -42,10 +46,6 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
         model.add(tf.keras.layers.Flatten())
 
         image_section_layer = model(image_section_layer)
-
-    # add dropout if needed
-    if DROPOUT_N != 0.:
-        image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
 
     output_layer_dense = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER)
 

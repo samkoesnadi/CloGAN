@@ -8,7 +8,7 @@ from models.multi_class import model_MC_SVM
 from utils.utils import _np_to_binary
 import sklearn.metrics
 
-PRINT_PREDICTION = False
+PRINT_PREDICTION = True
 
 if __name__ == "__main__":
     if USE_SVM:
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         predictions = model.predict(input)
 
         label = (predictions[0][:, TRAIN_FIVE_CATS_INDEX] >= 0.3).astype(np.float32) if PRINT_PREDICTION else label.numpy()
-        feature_vectors = tf.reduce_mean(predictions[1], axis=[1,2])
+        feature_vectors = tf.reduce_mean(predictions[1], axis=[1,2]).numpy()
 
         # filter zeros
         _i_zeros = np.argwhere(np.array(list(map(_np_to_binary, label))) != 0)[:, 0]

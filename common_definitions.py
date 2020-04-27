@@ -30,7 +30,7 @@ KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 USE_SVM = False
 USE_PATIENT_DATA = False
 USE_WN = False
-USE_CONV1D = True
+USE_CONV1D = False
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 PAT_DATA_SIZE = 4
 NUM_FEATURES = 2048 + (PAT_DATA_SIZE if USE_PATIENT_DATA else 0)
@@ -42,14 +42,14 @@ USE_AUGMENTATION = False
 USE_CLR = False
 USE_DROPOUT_PAT_DATA = True
 BUFFER_SIZE = 1600
-BATCH_SIZE = 16  # 32 is optimal
+BATCH_SIZE = 32  # 32 is optimal
 MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
 USE_GAN = True
-LAMBDA_ADV = .125
+LAMBDA_ADV = 1.
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
