@@ -111,9 +111,7 @@ if __name__ == "__main__":
         # Notice the use of `tf.function`
         # This annotation causes the function to be "compiled".
         @tf.function
-        def gan_train_step(self, source_image_batch, source_label_batch, target_image_batch, bs):
-            _eps = tf.random.uniform((bs, 1))  # normal random
-
+        def gan_train_step(self, source_image_batch, source_label_batch, target_image_batch):
             with tf.GradientTape(persistent=True) as g:
                 source_predictions = model(source_image_batch, training=True)
                 target_predictions = model(target_image_batch, training=True)
@@ -129,14 +127,14 @@ if __name__ == "__main__":
                 # xe_gen_loss = xe_loss
                 gen_loss = self.lambda_adv * gen_loss
 
-            gradients_of_generator = g.gradient(gen_loss, model.trainable_variables)
+            gradients_of_generator = g.gradient(gen_loss, model.trainable_variables[:154])
             # gradients_of_xe_gen = g.gradient(xe_gen_loss, model.trainable_variables)
             gradients_of_discriminator = g.gradient(disc_loss, discriminator.trainable_variables)
 
+            del g  # delete the persistent gradientTape
+
             _optimizer_disc.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
             _optimizer_gen.apply_gradients(zip(gradients_of_generator, model.trainable_variables))
-
-            del g  # delete the persistent gradientTape
 
             with tf.GradientTape() as g:
                 source_predictions = model(source_image_batch, training=True)
@@ -153,7 +151,7 @@ if __name__ == "__main__":
             return xe_loss, gen_loss, disc_loss
 
         @tf.function
-        def mmd_train_step(self, source_image_batch, source_label_batch, target_image_batch, bs):
+        def mmd_train_step(self, source_image_batch, source_label_batch, target_image_batch):
             with tf.GradientTape(persistent=True) as g:
                 source_predictions = model(source_image_batch, training=True)
                 target_predictions = model(target_image_batch, training=True)
@@ -215,7 +213,7 @@ if __name__ == "__main__":
 
                 g = trainWorker.gan_train_step if USE_GAN else trainWorker.mmd_train_step
                 xe_loss, gen_loss, disc_loss = g(source_image_batch, source_label_batch,
-                                                 target_image_batch, _batch_size)
+                                                 target_image_batch)
                 _auc = trainWorker.metric.result().numpy()
 
                 # update tqdm
