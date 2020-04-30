@@ -19,13 +19,16 @@ def make_discriminator_model():
 
     model = tf.keras.Sequential()
 
-    model.add(tf.keras.layers.Conv2D(256, 5))
+    model.add(tf.keras.layers.BatchNormalization())
+    # model.add(tf.keras.layers.Activation("tanh"))
+
+    model.add(tf.keras.layers.Conv2D(64, 3))
     model.add(tf.keras.layers.LeakyReLU())
-    model.add(tf.keras.layers.Dropout(DROPOUT_N))
+    model.add(tf.keras.layers.Dropout(0.3))
 
     model.add(tf.keras.layers.Conv2D(128, 3))
     model.add(tf.keras.layers.LeakyReLU())
-    model.add(tf.keras.layers.Dropout(DROPOUT_N))
+    model.add(tf.keras.layers.Dropout(0.3))
 
     model.add(tf.keras.layers.Flatten())
     model.add(tf.keras.layers.Dense(1))

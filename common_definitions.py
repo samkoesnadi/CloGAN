@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import ceil
 import datetime
+
 # import os
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -37,19 +38,22 @@ NUM_FEATURES = 2048 + (PAT_DATA_SIZE if USE_PATIENT_DATA else 0)
 
 # train settings
 # USE_CLASS_WEIGHT = False
-USE_SPARSITY_NORM = True
+USE_SPARSITY_NORM = False
 USE_AUGMENTATION = False
 USE_CLR = False
 USE_DROPOUT_PAT_DATA = True
 BUFFER_SIZE = 1600
-BATCH_SIZE = 16  # 32 is optimal
+BATCH_SIZE = 32  # 32 is optimal
 MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
 USE_GAN = True
-LAMBDA_ADV = 1.
+LAMBDA_WEI = .01
+LAMBDA_ADV = .001
+LAMBDA_LOC = 40
+EPS_ADV = 0.4
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
