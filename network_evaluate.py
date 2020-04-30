@@ -29,26 +29,32 @@ if __name__ == "__main__":
         _path = CHEXPERT_VALID_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_VALID_TARGET_TFRECORD_PATH
         _test_n = CHEXPERT_VAL_N if EVAL_CHEXPERT else CHESTXRAY_VAL_N
 
+    _dataset_path = CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH
+
+    _path = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
+    _dataset_path = CHESTXRAY_DATASET_PATH
+
     # get the data set
-    test_dataset = read_dataset(_path, CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH,
+    test_dataset = read_dataset(_path, _dataset_path,
                                 use_patient_data=USE_PATIENT_DATA, evaluation_mode=True)
 
     results = np.zeros((_test_n, 5), dtype=np.float32)
-test_label_nps = np.zeros((_test_n, 5), dtype=np.float32)
-# get the ground truth labels
-for i_d, (test_img, test_label) in tqdm(enumerate(test_dataset)):
-    _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]
+    test_label_nps = np.zeros((_test_n, 5), dtype=np.float32)
 
-    # Evaluate the model on the test data using `evaluate`
-    result = model.predict(test_img)
-    result = result[:, TRAIN_FIVE_CATS_INDEX]
+    # get the ground truth labels
+    for i_d, (test_img, test_label) in tqdm(enumerate(test_dataset.take(_test_n//BATCH_SIZE))):
+        _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]
 
-    results[i_d * BATCH_SIZE: i_d * BATCH_SIZE + _batch_to_fill] = result
-    test_label_nps[i_d * BATCH_SIZE: i_d * BATCH_SIZE + _batch_to_fill] = test_label
+        # Evaluate the model on the test data using `evaluate`
+        result = model.predict(test_img)
+        result = result[:, TRAIN_FIVE_CATS_INDEX]
 
-# start calculating metrics
-print("F1: ", np.mean(f1(test_label_nps, results).numpy()))
+        results[i_d * BATCH_SIZE: i_d * BATCH_SIZE + _batch_to_fill] = result
+        test_label_nps[i_d * BATCH_SIZE: i_d * BATCH_SIZE + _batch_to_fill] = test_label
 
-roc_auc = plot_roc(test_label_nps, results, True)
+    # start calculating metrics
+    print("F1: ", np.mean(f1(test_label_nps, results).numpy()))
 
-print("test auc:", roc_auc, ", auc macro:", sum(roc_auc) / len(roc_auc))
+    roc_auc = plot_roc(test_label_nps, results, True)
+
+    print("test auc:", roc_auc, ", auc macro:", sum(roc_auc) / len(roc_auc))

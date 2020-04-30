@@ -121,7 +121,7 @@ if __name__ == "__main__":
                 target_output = discriminator(target_predictions[1], training=True)
 
                 # calculate losses
-                # xe_loss = _XEloss(source_label_batch, source_predictions[0])
+                xe_loss = _XEloss(source_label_batch, source_predictions[0])
                 gen_loss, disc_loss = disc_gen_loss(source_output, target_output)
                 # xe_gen_loss = xe_loss + self.lambda_adv * gen_loss
                 # xe_gen_loss = xe_loss
@@ -136,47 +136,10 @@ if __name__ == "__main__":
             _optimizer_disc.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
             _optimizer_gen.apply_gradients(zip(gradients_of_generator, model.trainable_variables))
 
-            with tf.GradientTape() as g:
-                source_predictions = model(source_image_batch, training=True)
-
-                # calculate losses
-                xe_loss = _XEloss(source_label_batch, source_predictions[0])
-
-            gradients_of_xe = g.gradient(xe_loss, model.trainable_variables)
-            _optimizer_xe.apply_gradients(zip(gradients_of_xe, model.trainable_variables))
-
             # calculate metrics
             self.metric.update_state(source_label_batch, source_predictions[0])
 
             return xe_loss, gen_loss, disc_loss
-
-        @tf.function
-        def mmd_train_step(self, source_image_batch, source_label_batch, target_image_batch):
-            with tf.GradientTape(persistent=True) as g:
-                source_predictions = model(source_image_batch, training=True)
-                target_predictions = model(target_image_batch, training=True)
-
-                # notation based on MMD formula
-                phi_xs = tf.reduce_mean(source_predictions[1], axis=0)
-                phi_xt = tf.reduce_mean(target_predictions[1], axis=0)
-
-                # calculate losses
-                xe_loss = _XEloss(source_label_batch, source_predictions[0])
-                dksq = tf.linalg.norm(phi_xs - phi_xt) ** 2
-
-                total_loss = xe_loss + self.lambda_adv * dksq
-
-            # gradients_of_xe = gen_tape.gradient(xe_loss, model.trainable_variables)
-            # gradients_of_generator = gen_tape.gradient(gen_loss, model.trainable_variables)
-            gradients_of_xe_gen = g.gradient(total_loss, model.trainable_variables)
-
-            _optimizer_xe.apply_gradients(zip(gradients_of_xe_gen, model.trainable_variables))
-
-            # calculate metrics
-            self.metric.update_state(source_label_batch, source_predictions[0])
-
-            del g  # delete the persisten gradientTape
-            return xe_loss, dksq, 0.
 
 
     # initiate worker
