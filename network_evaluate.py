@@ -5,12 +5,15 @@ from datasets.cheXpert_dataset import read_dataset
 from models.multi_class import *
 from models.multi_label import *
 from utils.visualization import *
+from models.gan import *
 
 USE_TEST = True
 
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM()
+    elif USE_GAN:
+        model = model_binaryXE_gan()
     else:
         model = model_binaryXE(use_patient_data=USE_PATIENT_DATA)
 
@@ -30,9 +33,6 @@ if __name__ == "__main__":
         _test_n = CHEXPERT_VAL_N if EVAL_CHEXPERT else CHESTXRAY_VAL_N
 
     _dataset_path = CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH
-
-    _path = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
-    _dataset_path = CHESTXRAY_DATASET_PATH
 
     # get the data set
     test_dataset = read_dataset(_path, _dataset_path,

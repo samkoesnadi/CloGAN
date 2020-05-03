@@ -127,10 +127,10 @@ if __name__ == "__main__":
                 _zero_matrix = tf.zeros_like(target_output)
                 _adap_weight = 1. - tf.keras.losses.cosine_similarity(target_predictions[2], target_predictions[3])
 
-                gen_loss = tf.reduce_mean(cross_entropy(_one_matrix, source_output)) + \
-                           tf.reduce_mean((self.lambda_local * _adap_weight + self.eps_adv) * cross_entropy(_zero_matrix, target_output)[:, None, None])
+                gen_loss = (self.lambda_local * _adap_weight + self.eps_adv) * (tf.reduce_mean(cross_entropy(_one_matrix, source_output)) + \
+                           tf.reduce_mean(cross_entropy(_zero_matrix, target_output)))
                 disc_loss = tf.reduce_mean(cross_entropy(_zero_matrix, source_output)) + \
-                            tf.reduce_mean((self.lambda_local * _adap_weight + self.eps_adv) * cross_entropy(_one_matrix, target_output)[:, None, None])
+                            tf.reduce_mean(cross_entropy(_one_matrix, target_output))
 
                 total_loss = xe_loss + self.lambda_adv * gen_loss + self.lambda_weight * weight_loss
 
