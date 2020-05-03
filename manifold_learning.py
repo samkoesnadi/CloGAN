@@ -7,12 +7,15 @@ from models.multi_label import model_binaryXE_mid
 from models.multi_class import model_MC_SVM
 from utils.utils import _np_to_binary
 import sklearn.metrics
+from models.gan import *
 
-PRINT_PREDICTION = True
+PRINT_PREDICTION = False
 
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM(with_feature=True)
+    elif USE_GAN:
+        model = model_binaryXE_mid_gan()
     else:
         model = model_binaryXE_mid(use_patient_data=USE_PATIENT_DATA)
 

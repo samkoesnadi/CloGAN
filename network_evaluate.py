@@ -4,6 +4,7 @@ Train normal model with binary XE as loss function
 from datasets.cheXpert_dataset import read_dataset
 from models.multi_class import *
 from models.multi_label import *
+from models.gan import *
 from utils.visualization import *
 
 USE_TEST = True
@@ -11,6 +12,8 @@ USE_TEST = True
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM()
+    elif USE_GAN:
+        model = model_binaryXE_mid_gan()
     else:
         model = model_binaryXE(use_patient_data=USE_PATIENT_DATA)
 
@@ -31,9 +34,6 @@ if __name__ == "__main__":
 
     _dataset_path = CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH
 
-    _path = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
-    _dataset_path = CHESTXRAY_DATASET_PATH
-
     # get the data set
     test_dataset = read_dataset(_path, _dataset_path,
                                 use_patient_data=USE_PATIENT_DATA, evaluation_mode=True)
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]
 
         # Evaluate the model on the test data using `evaluate`
-        result = model.predict(test_img)
+        result = model.predict(test_img)[0]
         result = result[:, TRAIN_FIVE_CATS_INDEX]
 
         results[i_d * BATCH_SIZE: i_d * BATCH_SIZE + _batch_to_fill] = result

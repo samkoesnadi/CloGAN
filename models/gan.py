@@ -2,36 +2,52 @@
 Normal model with binary XE as loss function
 """
 from common_definitions import *
-from utils.weightnorm import WeightNormalization
+
+def xception_end_layer_block(inp, filters, name):
+    sep_conv = tf.keras.layers.SeparableConv2D(filters, kernel_size=3, name=name, padding="same",
+                                               kernel_initializer=KERNEL_INITIALIZER, use_bias=False)(inp)
+    _bn = tf.keras.layers.BatchNormalization(name=name+"_bn")(sep_conv)
+    _act = tf.keras.layers.Activation(GLOBAL_ACTIVATION, name=name+"_act")(_bn)
+
+    return _act
 
 def raw_model_binaryXE_gan():
     input_layer = tf.keras.layers.Input(shape=(IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1), name="input_img")
     image_section_model = tf.keras.applications.xception.Xception(include_top=False, weights=None, pooling=None,
                                                                   input_tensor=input_layer)
-    image_feature_vectors = image_section_model.output
+    _add_layer = image_section_model.get_layer("add_11").output
 
-    # add dropout if needed
-    if DROPOUT_N != 0.:
-        image_feature_vectors = tf.keras.layers.Dropout(DROPOUT_N)(image_feature_vectors)
+    source_sep_conv1_act = xception_end_layer_block(_add_layer, 1536, "block14_sepconv1")
+    source_sep_conv2 = tf.keras.layers.SeparableConv2D(2048, kernel_size=3, name="block14_sepconv2", padding="same",
+                                                       kernel_initializer=KERNEL_INITIALIZER, use_bias=False)(source_sep_conv1_act)
 
-    # # add regularizer as the experiments show that it results positively when the avg value of image_feature_vectors is small
-    # image_feature_vectors = tf.keras.layers.ActivityRegularization(l2=ACTIVIY_REGULARIZER_VAL)(image_feature_vectors)
+    target_sep_conv1_act = xception_end_layer_block(_add_layer, 1536, "block14_sepconv1_target")
+    target_sep_conv2 = tf.keras.layers.SeparableConv2D(2048, kernel_size=3, name="block14_sepconv2_target", padding="same",
+                                                       kernel_initializer=KERNEL_INITIALIZER, use_bias=False)(target_sep_conv1_act)
 
-    feature_vectors_1 = tf.keras.layers.Conv2D(NUM_CLASSES, kernel_size=1, name="predictions_1")(image_feature_vectors)
+    # post-process the image features
+    _bn = tf.keras.layers.BatchNormalization(name="block14_sepconv2_bn")(source_sep_conv2)  # the input can be from source or mixed
+    _act = tf.keras.layers.Activation(GLOBAL_ACTIVATION, name="block14_sepconv2_act")(_bn)
 
-    feature_vectors_2 = tf.keras.layers.Conv2D(NUM_CLASSES, kernel_size=1, name="predictions_2")(image_feature_vectors)
+    image_section_layer = tf.keras.layers.GlobalAveragePooling2D()(_act)
 
-    feature_vectors = tf.keras.layers.Add()([feature_vectors_1, feature_vectors_2])
-    # feature_vectors = tf.keras.layers.Activation("sigmoid", dtype='float32', name='predictions')(feature_vectors)
+    output_layer_dense = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER)
 
-    output_layer = tf.keras.layers.GlobalAveragePooling2D()(feature_vectors)
-    output_layer = tf.keras.layers.Activation("sigmoid", dtype='float32', name='predictions')(output_layer)
+    output_layer = tf.keras.layers.Activation("sigmoid", name='predictions')(output_layer_dense(image_section_layer))
 
-    return input_layer, output_layer, feature_vectors, feature_vectors_1, feature_vectors_2
+    return input_layer, output_layer, source_sep_conv2, target_sep_conv2
 
 
 def model_binaryXE_mid_gan():
-    input_layer, output_layer, feature_vectors, feature_vectors_1, feature_vectors_2 = raw_model_binaryXE_gan()
+    layers = raw_model_binaryXE_gan()
 
-    model = tf.keras.Model(inputs=input_layer, outputs=[output_layer, feature_vectors, feature_vectors_1, feature_vectors_2])
+    model = tf.keras.Model(inputs=layers[0],
+                           outputs=layers[1:])
+    return model
+
+
+def model_binaryXE_gan():
+    layers = raw_model_binaryXE_gan()
+
+    model = tf.keras.Model(inputs=layers[0], outputs=layers[1])
     return model

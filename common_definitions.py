@@ -26,12 +26,14 @@ NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.5
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
+GLOBAL_ACTIVATION = tf.nn.leaky_relu
 
 # network model related variable
 USE_SVM = False
 USE_PATIENT_DATA = False
 USE_WN = False
 USE_CONV1D = False
+USE_GAN = True
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 PAT_DATA_SIZE = 4
 NUM_FEATURES = 2048 + (PAT_DATA_SIZE if USE_PATIENT_DATA else 0)
@@ -43,17 +45,14 @@ USE_AUGMENTATION = False
 USE_CLR = False
 USE_DROPOUT_PAT_DATA = True
 BUFFER_SIZE = 1600
-BATCH_SIZE = 16  # 32 is optimal
+BATCH_SIZE = 32  # 32 is optimal
 MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
-USE_GAN = True
-LAMBDA_WEI = .01
-LAMBDA_ADV = .001
-LAMBDA_LOC = 40
-EPS_ADV = 0.4
+LAMBDA_WEI = .01  # .01
+LAMBDA_ADV = 1.  # .001
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
@@ -213,7 +212,6 @@ elif IMAGE_INPUT_SIZE == 224:
     K_SN = 49721.094
 else:
     K_SN = 1.
-    raise Exception("Please re-calculate K_SN")
 
 FEATURES_NP_FILE_1 = "../records/chextpert_train_input_features"
 FEATURES_NP_FILE_2 = "../records/chestray14_train_input_features"
