@@ -1,9 +1,10 @@
 from common_definitions import *
 import scipy.spatial
-from utils.utils import FeatureLoss
 import numpy as np
 
 if __name__ == "__main__":
+    print(tf.keras.losses.CosineSimilarity()([0.,1.], [0.,1.]))
+    exit()
     print(1. - scipy.spatial.distance.cosine(np.array([0,0,0,1,0]), np.array([0,0,1,1,0])))
     print(1. - scipy.spatial.distance.cosine(np.array([0,0,0,1,0]), np.array([0,0,0,1,0])))
     print(1. - scipy.spatial.distance.cosine(np.array([0,0,0,1,0]), np.array([0,1,1,1,0])))

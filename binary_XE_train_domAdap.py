@@ -99,15 +99,15 @@ if __name__ == "__main__":
 
         def calc_weight_loss(self, name):
             _weights_1 = model.get_layer(name).weights
-            # _weights_1 = tf.reshape(_weights_1[0], [-1])
-            _weights_1 = tf.squeeze(_weights_1[0])
+            _weights_1 = tf.reshape(_weights_1[0], [-1])
+            # _weights_1 = tf.squeeze(_weights_1[0])
 
             _weights_2 = model.get_layer(name + "_target").weights
-            # _weights_2 = tf.reshape(_weights_2[0], [-1])
-            _weights_2 = tf.squeeze(_weights_2[0])
+            _weights_2 = tf.reshape(_weights_2[0], [-1])
+            # _weights_2 = tf.squeeze(_weights_2[0])
 
-            weight_loss = tf.keras.losses.cosine_similarity(_weights_1,
-                                                            _weights_2) + 1.  # +1 is for a positive loss
+            weight_loss = tf.math.abs(tf.keras.losses.cosine_similarity(_weights_1, _weights_2))
+            # weight_loss = tf.keras.losses.cosine_similarity(_weights_1, _weights_2) + 1.
 
             return weight_loss
 
@@ -129,13 +129,13 @@ if __name__ == "__main__":
                 # calculate weights loss
                 weight_loss = self.calc_weight_loss("block14_sepconv1")
                 weight_loss += self.calc_weight_loss("block14_sepconv2")
-                weight_loss = tf.reduce_mean(weight_loss)
+                # weight_loss = tf.reduce_mean(weight_loss)
 
                 # calculate gen loss, disc loss
                 _one_matrix = tf.ones_like(target_disc_output)
                 _zero_matrix = tf.zeros_like(target_disc_output)
                 # _adap_weight = tf.stop_gradient(1. - tf.keras.losses.cosine_similarity(target_predictions[2], target_predictions[3]))
-                #tf.reduce_mean((self.lambda_local * _adap_weight + self.eps_adv) *
+                # tf.reduce_mean((self.lambda_local * _adap_weight + self.eps_adv) *
 
                 gen_loss = tf.reduce_mean(cross_entropy(_one_matrix, target_disc_output))
 
@@ -143,7 +143,7 @@ if __name__ == "__main__":
                                            cross_entropy(_zero_matrix, target_disc_output))
 
                 total_loss = source_xe_loss + self.lambda_adv * gen_loss + self.lambda_weight * weight_loss
-                # total_loss = source_xe_loss + self.lambda_adv * gen_loss
+                # total_loss = source_xe_loss + self.lambda_weight * weight_loss
 
             gradients_of_model = g.gradient(total_loss, model.trainable_variables)
             gradients_of_discriminator = g.gradient(disc_loss, discriminator.trainable_variables)
@@ -178,6 +178,7 @@ if __name__ == "__main__":
             self.metric.update_state(source_label_batch, source_predictions[0])
 
             return xe_loss, 0., 0., 0., 0.
+
 
     # initiate worker
     trainWorker = TrainWorker(_metric, lambda_weight=LAMBDA_WEI, lambda_adv=LAMBDA_ADV)
@@ -223,7 +224,7 @@ if __name__ == "__main__":
 
                 # update loss
                 [losses[i].update_state(_losses[i]) for i in range(num_losses - 1)]
-                losses[num_losses-1].update_state(_auc)
+                losses[num_losses - 1].update_state(_auc)
 
                 # update tqdm
                 t.postfix[0]["xe_loss"] = losses[0].result().numpy()
