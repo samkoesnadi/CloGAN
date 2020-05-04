@@ -117,7 +117,7 @@ class GANModel(tf.keras.Model):
         return output_layer, source_sep_conv2, target_sep_conv2
 
     def call(self, inputs, training=False, **kwargs):
-        return self.call_w_features(inputs, training=training, dont_stop_gradient_shared=True)["predictions"]
+        return self.call_w_features(inputs, training=training, dont_stop_gradient_shared=True)[0]
 
 
 # def model_binaryXE_mid_gan():
