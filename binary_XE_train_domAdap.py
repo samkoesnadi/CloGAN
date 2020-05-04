@@ -18,7 +18,7 @@ TARGET_DATASET_PATH = CHESTXRAY_DATASET_PATH
 USE_XE = False
 
 if __name__ == "__main__":
-    model = model_binaryXE_mid_gan()
+    model = GANModel()
     discriminator = make_discriminator_model()
 
     # get the dataset
@@ -117,7 +117,8 @@ if __name__ == "__main__":
         def gan_train_step(self, source_image_batch, source_label_batch, target_image_batch):
             with tf.GradientTape(persistent=True) as g:
                 source_predictions = model(source_image_batch, training=True)
-                target_predictions = model(target_image_batch, training=True)
+                target_predictions = model(target_image_batch, training=True,
+                                           dont_stop_gradient_shared=GAN_TRAIN_SHARED_FEATURES)
 
                 # input the predicted feature to the discriminator
                 source_disc_output = tf.stop_gradient(discriminator(source_predictions[1], training=True))

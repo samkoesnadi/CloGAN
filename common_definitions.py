@@ -51,6 +51,7 @@ LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
+GAN_TRAIN_SHARED_FEATURES = False
 LAMBDA_WEI = 1.  # .01
 LAMBDA_ADV = 1.  # .001
 
