@@ -91,8 +91,7 @@ class GANModel(tf.keras.Model):
         self.output_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", name='predictions',
                                                   kernel_initializer=KERNEL_INITIALIZER)
 
-    @tf.function
-    def call(self, inputs, training=False, dont_stop_gradient_shared=True, **kwargs):
+    def call_w_features(self, inputs, training=False, dont_stop_gradient_shared=True):
         shared_layer = self.shared_model(inputs, training) if dont_stop_gradient_shared else \
             tf.stop_gradient(self.shared_model(inputs, training))
 
@@ -112,7 +111,12 @@ class GANModel(tf.keras.Model):
 
         output_layer = self.output_layer(final_do)
 
-        return output_layer, source_sep_conv2, target_sep_conv2
+        return {"predictions": output_layer,
+                "features_1": source_sep_conv2,
+                "features_2": target_sep_conv2}
+
+    def call(self, inputs, training=False, **kwargs):
+        return self.call_w_features(inputs, training=training, dont_stop_gradient_shared=True)["predictions"]
 
 
 # def model_binaryXE_mid_gan():

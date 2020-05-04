@@ -63,8 +63,8 @@ if __name__ == "__main__":
     # set all the parameters
     model_params = {
         "optimizer": _optimizer,
-        "loss": {"predictions": _XEloss},
-        "metrics": {"predictions": _metric}
+        "loss": _XEloss,
+        "metrics": [_metric]
     }
 
     model.compile(**model_params)  # compile model
@@ -116,16 +116,16 @@ if __name__ == "__main__":
         @tf.function
         def gan_train_step(self, source_image_batch, source_label_batch, target_image_batch):
             with tf.GradientTape(persistent=True) as g:
-                source_predictions = model(source_image_batch, training=True)
-                target_predictions = model(target_image_batch, training=True,
+                source_predictions = model.call_w_features(source_image_batch, training=True)
+                target_predictions = model.call_w_features(target_image_batch, training=True,
                                            dont_stop_gradient_shared=GAN_TRAIN_SHARED_FEATURES)
 
                 # input the predicted feature to the discriminator
-                source_disc_output = tf.stop_gradient(discriminator(source_predictions[1], training=True))
-                target_disc_output = discriminator(target_predictions[2], training=True)
+                source_disc_output = tf.stop_gradient(discriminator(source_predictions["features_1"], training=True))
+                target_disc_output = discriminator(target_predictions["features_2"], training=True)
 
                 # calculate xe loss
-                source_xe_loss = _XEloss(source_label_batch, source_predictions[0])
+                source_xe_loss = _XEloss(source_label_batch, source_predictions["predictions"])
 
                 # calculate weights loss
                 weight_loss = self.calc_weight_loss("block14_sepconv1")
@@ -155,7 +155,7 @@ if __name__ == "__main__":
             _optimizer.apply_gradients(zip(gradients_of_model, model.trainable_variables))
 
             # calculate metrics
-            self.metric.update_state(source_label_batch, source_predictions[0])
+            self.metric.update_state(source_label_batch, source_predictions["predictions"])
 
             return source_xe_loss, gen_loss, disc_loss, weight_loss, 0.
 
@@ -215,8 +215,7 @@ if __name__ == "__main__":
                   postfix=[
                       dict(xe_loss=np.inf, gen_loss=np.inf, disc_loss=np.inf, weight_loss=np.inf, _adap_weight=np.inf,
                            AUC=0.)]) as t:
-            for i_batch, (source_image_batch, (source_label_batch, target_image_batch)) in enumerate(
-                    train_dataset):
+            for i_batch, (source_image_batch, (source_label_batch, target_image_batch)) in enumerate(train_dataset):
                 _batch_size = tf.shape(source_image_batch)[0].numpy()
                 _callbackList.on_batch_begin(i_batch, {"size": _batch_size})  # on batch begin
 
@@ -242,12 +241,13 @@ if __name__ == "__main__":
         print()
         print("Validating...")
         results = model.evaluate(val_dataset, callbacks=_callbacks)
+
         _callbackList.on_epoch_end(epoch, {"loss": losses[0].result(),
                                            "gen_loss": losses[1].result(),
                                            "disc_loss": losses[2].result(),
                                            "auc": _auc,
                                            "val_loss": results[0],
-                                           "val_auc": results[2],
+                                           "val_auc": results[1],
                                            "lr": model.optimizer.lr})  # on epoch end
 
         # reset states
