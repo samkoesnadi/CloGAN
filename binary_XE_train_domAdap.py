@@ -106,7 +106,7 @@ if __name__ == "__main__":
             _weights_2 = tf.reshape(_weights_2[0], [-1])
             # _weights_2 = tf.squeeze(_weights_2[0])
 
-            weight_loss = tf.math.abs(tf.keras.losses.cosine_similarity(_weights_1, _weights_2))
+            weight_loss = tf.math.abs(tf.keras.losses.cosine_similarity(tf.stop_gradient(_weights_1), _weights_2))
             # weight_loss = tf.keras.losses.cosine_similarity(_weights_1, _weights_2) + 1.
 
             return weight_loss
