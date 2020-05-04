@@ -13,7 +13,9 @@ if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM()
     elif USE_GAN:
-        model = model_binaryXE_mid_gan()
+        model = GANModel()
+        # to initiate the graph
+        model.call_w_features(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))
     else:
         model = model_binaryXE(use_patient_data=USE_PATIENT_DATA)
 
@@ -46,7 +48,7 @@ if __name__ == "__main__":
         _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]
 
         # Evaluate the model on the test data using `evaluate`
-        result = model.predict(test_img)[0]
+        result = model.predict(test_img)
         result = result[:, TRAIN_FIVE_CATS_INDEX]
 
         results[i_d * BATCH_SIZE: i_d * BATCH_SIZE + _batch_to_fill] = result

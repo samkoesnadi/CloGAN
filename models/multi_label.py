@@ -16,7 +16,7 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
 
     # # add regularizer as the experiments show that it results positively when the avg value of image_feature_vectors is small
     # image_feature_vectors = tf.keras.layers.ActivityRegularization(l2=ACTIVIY_REGULARIZER_VAL)(image_feature_vectors)
-    image_feature_vectors = tf.identity(image_feature_vectors, name="image_feature_vectors")  # to change the name
+    image_feature_vectors = tf.identity(image_feature_vectors, name="features")  # to change the name
 
     if use_patient_data:
         # process semantic

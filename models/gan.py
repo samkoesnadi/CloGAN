@@ -105,15 +105,16 @@ class GANModel(tf.keras.Model):
         _bn = self._bn(source_sep_conv2, training)  # the input can be from source or mixed
         _act = self._act(_bn)
 
+        # _act += self._act(self._bn(target_sep_conv2, training))
+        # _act /= 2
+
         image_section_layer = self.image_section_layer(_act)
 
         final_do = self.final_do(image_section_layer, training)
 
         output_layer = self.output_layer(final_do)
 
-        return {"predictions": output_layer,
-                "features_1": source_sep_conv2,
-                "features_2": target_sep_conv2}
+        return output_layer, source_sep_conv2, target_sep_conv2
 
     def call(self, inputs, training=False, **kwargs):
         return self.call_w_features(inputs, training=training, dont_stop_gradient_shared=True)["predictions"]

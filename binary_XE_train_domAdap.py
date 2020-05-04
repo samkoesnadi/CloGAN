@@ -21,6 +21,9 @@ if __name__ == "__main__":
     model = GANModel()
     discriminator = make_discriminator_model()
 
+    # to initiate the graph
+    model.call_w_features(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))
+
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
                                  use_patient_data=USE_PATIENT_DATA,
@@ -121,11 +124,11 @@ if __name__ == "__main__":
                                            dont_stop_gradient_shared=GAN_TRAIN_SHARED_FEATURES)
 
                 # input the predicted feature to the discriminator
-                source_disc_output = tf.stop_gradient(discriminator(source_predictions["features_1"], training=True))
-                target_disc_output = discriminator(target_predictions["features_2"], training=True)
+                source_disc_output = tf.stop_gradient(discriminator(source_predictions[1], training=True))
+                target_disc_output = discriminator(target_predictions[2], training=True)
 
                 # calculate xe loss
-                source_xe_loss = _XEloss(source_label_batch, source_predictions["predictions"])
+                source_xe_loss = _XEloss(source_label_batch, source_predictions[0])
 
                 # calculate weights loss
                 weight_loss = self.calc_weight_loss("block14_sepconv1")
@@ -155,7 +158,7 @@ if __name__ == "__main__":
             _optimizer.apply_gradients(zip(gradients_of_model, model.trainable_variables))
 
             # calculate metrics
-            self.metric.update_state(source_label_batch, source_predictions["predictions"])
+            self.metric.update_state(source_label_batch, source_predictions[0])
 
             return source_xe_loss, gen_loss, disc_loss, weight_loss, 0.
 
