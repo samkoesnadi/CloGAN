@@ -74,11 +74,6 @@ class GANModel(tf.keras.Model):
                                                                 padding="same",
                                                                 kernel_initializer=KERNEL_INITIALIZER, use_bias=False)
 
-        self.target_sep_conv1_act = EndBlock(1536, "block14_sepconv1_target")
-        self.target_sep_conv2 = tf.keras.layers.SeparableConv2D(2048, kernel_size=3, name="block14_sepconv2_target",
-                                                                padding="same",
-                                                                kernel_initializer=KERNEL_INITIALIZER, use_bias=False)
-
         # post-process the image features
         self._bn = tf.keras.layers.BatchNormalization(
             name="block14_sepconv2_bn")  # the input can be from source or mixed
@@ -88,36 +83,34 @@ class GANModel(tf.keras.Model):
 
         self.final_do = tf.keras.layers.Dropout(DROPOUT_N)
 
-        self.output_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", name='predictions',
-                                                  kernel_initializer=KERNEL_INITIALIZER)
+        self.dense1 = tf.keras.layers.Dense(1024, use_bias=False)
+        self.bn1 = tf.keras.layers.BatchNormalization()
+        self.act1 = tf.keras.layers.Activation(GLOBAL_ACTIVATION)
 
-    def call_w_features(self, inputs, training=False, dont_stop_gradient_shared=True):
-        shared_layer = self.shared_model(inputs, training) if dont_stop_gradient_shared else \
-            tf.stop_gradient(self.shared_model(inputs, training))
+        self.output_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", kernel_initializer=KERNEL_INITIALIZER)
+
+    def call(self, inputs, training=False, **kwargs):
+        shared_layer = self.shared_model(inputs, training)
 
         source_sep_conv1_act = self.source_sep_conv1_act(shared_layer, training)
         source_sep_conv2 = self.source_sep_conv2(source_sep_conv1_act)
-
-        target_sep_conv1_act = self.target_sep_conv1_act(shared_layer, training)
-        target_sep_conv2 = self.target_sep_conv2(target_sep_conv1_act)
 
         # post-process the image features
         _bn = self._bn(source_sep_conv2, training)  # the input can be from source or mixed
         _act = self._act(_bn)
 
-        # _act += self._act(self._bn(target_sep_conv2, training))
-        # _act /= 2
-
         image_section_layer = self.image_section_layer(_act)
 
         final_do = self.final_do(image_section_layer, training)
 
-        output_layer = self.output_layer(final_do)
+        # first layer of logistic
+        dense1 = self.dense1(final_do)
+        bn1 = self.bn1(dense1)
+        act1 = self.act1(bn1)
 
-        return output_layer, source_sep_conv2, target_sep_conv2
+        output_layer = self.output_layer(act1)
 
-    def call(self, inputs, training=False, **kwargs):
-        return self.call_w_features(inputs, training=training, dont_stop_gradient_shared=True)[0]
+        return output_layer
 
 
 # def model_binaryXE_mid_gan():

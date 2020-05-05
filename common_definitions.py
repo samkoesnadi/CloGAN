@@ -33,7 +33,7 @@ USE_SVM = False
 USE_PATIENT_DATA = False
 USE_WN = False
 USE_CONV1D = False
-USE_GAN = True
+USE_GAN = False
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 PAT_DATA_SIZE = 4
 NUM_FEATURES = 2048 + (PAT_DATA_SIZE if USE_PATIENT_DATA else 0)
@@ -51,9 +51,8 @@ LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
-GAN_TRAIN_SHARED_FEATURES = False
-LAMBDA_WEI = 1.  # .01
 LAMBDA_ADV = 1.  # .001
+LABEL_SMOOTHING = .1
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14

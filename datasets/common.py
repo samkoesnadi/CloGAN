@@ -175,11 +175,15 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                  use_feature_loss=False,
                  secondary_filename=CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH,
                  secondary_dataset_path=CHESTXRAY_DATASET_PATH,
-                 use_preprocess_img=False):
+                 use_preprocess_img=False,
+                 repeat=False):
     dataset = read_TFRecord(filename, num_class)
     dataset = dataset.map(lambda data: (
         load_image(tf.strings.join([dataset_path, '/', data["image_path"]]), use_preprocess_img=use_preprocess_img), data["patient_data"],
         data["label"]), num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
+
+    if repeat:
+        dataset = dataset.repeat()
 
     if evaluation_mode:
         dataset = dataset.map(lambda image, patient_data, label: (image, patient_data, tf.gather(label, tf.constant(eval_five_cats_index))),
