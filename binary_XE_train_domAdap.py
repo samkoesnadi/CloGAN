@@ -32,7 +32,7 @@ if __name__ == "__main__":
                                 use_feature_loss=False, use_preprocess_img=True)
 
     train_target_dataset = read_dataset(CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH, CHESTXRAY_DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                                use_feature_loss=False, use_preprocess_img=True)
+                                use_feature_loss=False, use_preprocess_img=True, repeat=True)
 
 
     # losses, optimizer, metrics
