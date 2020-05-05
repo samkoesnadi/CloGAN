@@ -12,7 +12,7 @@ USE_TEST = True
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM()
-    elif USE_GAN:
+    elif USE_DOM_ADAP_NET:
         model = GANModel()
         # to initiate the graph
         model.call_w_features(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))

@@ -14,6 +14,7 @@ from models.gan import *
 # global local vars
 TARGET_DATASET_FILENAME = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
 TARGET_DATASET_PATH = CHESTXRAY_DATASET_PATH
+USE_GAN = True
 
 if __name__ == "__main__":
     model = GANModel()
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
                                 use_feature_loss=False, use_preprocess_img=True)
 
-    train_target_dataset = read_dataset(CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH, CHESTXRAY_DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
+    train_target_dataset = read_dataset(TARGET_DATASET_FILENAME, TARGET_DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
                                 use_feature_loss=False, use_preprocess_img=True, repeat=True)
 
 
@@ -189,6 +190,7 @@ if __name__ == "__main__":
     _global_auc = 0.
     num_losses = 7
     losses = [tf.keras.metrics.Mean() for _ in range(num_losses)]
+    g = trainWorker.gan_train_step
     for epoch in range(init_epoch, fit_params["epochs"]):
         print("Epoch %d/%d" % (epoch + 1, fit_params["epochs"]))
         _callbackList.on_epoch_begin(epoch)  # on epoch start
@@ -198,14 +200,13 @@ if __name__ == "__main__":
 
         update_gen = (epoch % 2)
 
-        g = trainWorker.gan_train_step
         with tqdm(total=math.ceil(TRAIN_N / BATCH_SIZE),
                   postfix=[dict()]) as t:
             for i_batch, (source_image_batch, source_label_batch) in enumerate(train_dataset):
                 _batch_size = tf.shape(source_image_batch)[0].numpy()
                 _callbackList.on_batch_begin(i_batch, {"size": _batch_size})  # on batch begin
 
-                _losses = g(source_image_batch, source_label_batch, update_gen=update_gen)
+                _losses = g(source_image_batch, source_label_batch, update_gen=update_gen if USE_GAN else False)
                 _auc = trainWorker.metric.result().numpy()
 
                 # update loss

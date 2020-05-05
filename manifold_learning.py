@@ -10,13 +10,13 @@ import sklearn.metrics
 from models.gan import *
 
 PRINT_PREDICTION = False
-FEATURE_LAYER_NAME = 2 if USE_GAN else 1
+FEATURE_LAYER_NAME = 2 if USE_DOM_ADAP_NET else 1
 # FEATURE_LAYER_NAME = "features"
 
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM(with_feature=True)
-    elif USE_GAN:
+    elif USE_DOM_ADAP_NET:
         model = GANModel()
         # to initiate the graph
         model.call_w_features(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     _color_label = None
     _feature_nps = []
     for i_test, (input, label) in tqdm(enumerate(test_dataset.take(_test_n))):
-        predictions = model.predict(input) if not USE_GAN else model.call_w_features(input)
+        predictions = model.predict(input) if not USE_DOM_ADAP_NET else model.call_w_features(input)
 
         label = (predictions[0][:, TRAIN_FIVE_CATS_INDEX] >= 0.3).astype(np.float32) if PRINT_PREDICTION else label.numpy()
         feature_vectors = tf.reduce_mean(predictions[FEATURE_LAYER_NAME], axis=[1,2]).numpy()
