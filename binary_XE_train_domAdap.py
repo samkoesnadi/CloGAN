@@ -14,7 +14,7 @@ from models.gan import *
 # global local vars
 TARGET_DATASET_FILENAME = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
 TARGET_DATASET_PATH = CHESTXRAY_DATASET_PATH
-USE_GAN = True
+USE_GAN = 1
 
 if __name__ == "__main__":
     model = GANModel()

@@ -77,7 +77,7 @@ class GANModel(tf.keras.Model):
         # post-process the image features
         self._bn = tf.keras.layers.BatchNormalization(
             name="block14_sepconv2_bn")  # the input can be from source or mixed
-        self._act = tf.keras.layers.Activation("tanh", name="block14_sepconv2_act")
+        self._act = tf.keras.layers.Activation(GLOBAL_ACTIVATION, name="block14_sepconv2_act")
 
         self.image_section_layer = tf.keras.layers.GlobalAveragePooling2D()
 
