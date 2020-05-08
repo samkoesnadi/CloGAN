@@ -51,7 +51,7 @@ LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
-LAMBDA_ADV = 1.  # .001
+LAMBDA_ADV = .001  # .001
 LABEL_SMOOTHING = .1
 
 # eval settings
