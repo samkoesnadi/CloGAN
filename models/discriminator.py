@@ -2,30 +2,24 @@ from common_definitions import *
 
 
 def make_discriminator_model():
-    # model = tf.keras.Sequential()
-    # model.add(tf.keras.layers.Reshape((-1, 1)))
-    #
-    # model.add(tf.keras.layers.Conv1D(1, 5))
-    # model.add(tf.keras.layers.BatchNormalization(axis=0))
-    # model.add(tf.keras.layers.LeakyReLU())
-    #
-    # model.add(tf.keras.layers.Conv1D(1, 5))
-    # model.add(tf.keras.layers.BatchNormalization(axis=0))
-    # model.add(tf.keras.layers.LeakyReLU())
-    #
-    # model.add(tf.keras.layers.Flatten())
-    # model.add(tf.keras.layers.Dropout(DROPOUT_N))
-    # model.add(tf.keras.layers.Dense(1))
+    input_1 = tf.keras.Input(shape=2048)
+    input_2 = tf.keras.Input(shape=NUM_CLASSES)
 
-    model = tf.keras.Sequential()
+    hidden_1 = tf.keras.layers.Dense(6144, use_bias=False)(input_1)
+    hidden_1_bn = tf.keras.layers.BatchNormalization()(hidden_1)
+    hidden_1_act = tf.keras.layers.Activation(GLOBAL_ACTIVATION)(hidden_1_bn)
 
-    model.add(tf.keras.layers.Dense(1024, use_bias=False))
-    model.add(tf.keras.layers.BatchNormalization())
-    model.add(tf.keras.layers.Activation(GLOBAL_ACTIVATION))
+    hidden_2 = tf.keras.layers.Dense(1024, use_bias=False)(input_2)
+    hidden_2_bn = tf.keras.layers.BatchNormalization()(hidden_2)
+    hidden_2_act = tf.keras.layers.Activation(GLOBAL_ACTIVATION)(hidden_2_bn)
 
-    model.add(tf.keras.layers.Dense(1))
+    hidden = tf.keras.layers.Concatenate()([hidden_1_act, hidden_2_act])
 
-    return model
+    hidden = tf.keras.layers.Dropout(DROPOUT_N)(hidden)
+
+    output = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid")(hidden)
+
+    return tf.keras.Model(inputs=[input_2, input_1], outputs=output)
 
 
 if __name__ == "__main__":

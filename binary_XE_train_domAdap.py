@@ -21,7 +21,7 @@ if __name__ == "__main__":
     discriminator = make_discriminator_model()
 
     # to initiate the graph
-    model(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))
+    model.call_w_features(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))
 
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
@@ -83,7 +83,8 @@ if __name__ == "__main__":
     }
 
     # This method returns a helper function to compute cross entropy loss
-    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True, label_smoothing=LABEL_SMOOTHING)
+    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True, label_smoothing=LABEL_SMOOTHING,
+                                                       reduction=tf.keras.losses.Reduction.NONE)
 
     # save checkpoints
     checkpoint_dir = './checkpoints/disc'
@@ -124,38 +125,42 @@ if __name__ == "__main__":
             target_image_batch = target_data[0]
             target_label_batch = target_data[1]
 
-            with tf.GradientTape(persistent=True) as g:
-                source_predictions = model(source_image_batch, training=True)
-                target_predictions = model(target_image_batch, training=True)
+            _keras_eps = tf.keras.backend.epsilon()
 
-                # convert the range to [0..1)
-                source_predictions_minus = source_predictions * 2. - 1.
-                target_predictions_minus = target_predictions * 2. - 1.
+            with tf.GradientTape(persistent=True) as g:
+                source_predictions = model.call_w_features(source_image_batch, training=True)
+                target_predictions = model.call_w_features(target_image_batch, training=True)
 
                 # input the predicted feature to the discriminator
-                source_disc_output = discriminator(source_predictions_minus, training=True)
-                target_disc_output = discriminator(target_predictions_minus, training=True)
+                source_disc_output = discriminator(source_predictions, training=True)
+                target_disc_output = discriminator(target_predictions, training=True)
 
                 # calculate xe loss
-                source_xe_loss = _XEloss(source_label_batch, source_predictions)
+                source_xe_loss = _XEloss(source_label_batch, source_predictions[0])
                 target_xe_loss = _XEloss(tf.gather(target_label_batch, self._eval_indices, axis=-1),
-                                         tf.gather(target_predictions, self._eval_indices, axis=-1))
+                                         tf.gather(target_predictions[0], self._eval_indices, axis=-1))
 
-                # calculate gen loss, disc loss
-                _one_matrix = tf.ones_like(target_disc_output)
-                _zero_matrix = tf.zeros_like(target_disc_output)
+                # define the label batch
+                target_label = tf.stop_gradient(target_predictions[0])
+                source_label = tf.stop_gradient(source_predictions[0])
 
-                gen_loss = cross_entropy(_zero_matrix, source_disc_output) + cross_entropy(_one_matrix, target_disc_output)
+                gen_loss = source_label * tf.math.log(source_disc_output + _keras_eps) + \
+                            target_label * tf.math.log(1 - target_disc_output + _keras_eps)  # BATCH * NUM_CLASSES
+                disc_loss = target_label * tf.math.log(target_disc_output + _keras_eps) + \
+                            source_label * tf.math.log(1 - source_disc_output + _keras_eps)
 
-                disc_loss = cross_entropy(_one_matrix, source_disc_output) + cross_entropy(_zero_matrix, target_disc_output)
+                # reduce mean gen and disc
+                gen_loss = -tf.reduce_mean(gen_loss)
+                disc_loss = -tf.reduce_mean(disc_loss)
 
                 total_loss = source_xe_loss
                 if update_gen: total_loss += self.lambda_adv * gen_loss
+                # total_loss = self.lambda_adv * gen_loss
 
             gradients_of_model = g.gradient(total_loss, model.trainable_variables)
             gradients_of_discriminator = g.gradient(disc_loss, discriminator.trainable_variables)
-            avg_grad_model = (tf.reduce_mean(tf.concat([tf.reshape(grad, [-1]) for grad in gradients_of_model], axis=-1)))
-            avg_grad_disc = (tf.reduce_mean(tf.concat([tf.reshape(grad, [-1]) for grad in gradients_of_discriminator], axis=-1)))
+            avg_grad_model = (tf.reduce_mean(tf.concat([tf.reshape(tf.math.abs(grad), [-1]) for grad in gradients_of_model], axis=-1)))
+            avg_grad_disc = (tf.reduce_mean(tf.concat([tf.reshape(tf.math.abs(grad), [-1]) for grad in gradients_of_discriminator], axis=-1)))
 
             del g  # delete the persistent gradientTape
 
@@ -163,7 +168,7 @@ if __name__ == "__main__":
             _optimizer.apply_gradients(zip(gradients_of_model, model.trainable_variables))
 
             # calculate metrics
-            self.metric.update_state(source_label_batch, source_predictions)
+            self.metric.update_state(source_label_batch, source_predictions[0])
 
             return source_xe_loss, gen_loss, disc_loss, target_xe_loss, avg_grad_model, avg_grad_disc
 
@@ -198,7 +203,8 @@ if __name__ == "__main__":
         # reset losses mean
         [loss.reset_states() for loss in losses]
 
-        update_gen = (epoch % 2)
+        # update_gen = (epoch % 2) if USE_GAN else False
+        update_gen = USE_GAN
 
         with tqdm(total=math.ceil(TRAIN_N / BATCH_SIZE),
                   postfix=[dict()]) as t:
@@ -206,7 +212,7 @@ if __name__ == "__main__":
                 _batch_size = tf.shape(source_image_batch)[0].numpy()
                 _callbackList.on_batch_begin(i_batch, {"size": _batch_size})  # on batch begin
 
-                _losses = g(source_image_batch, source_label_batch, update_gen=update_gen if USE_GAN else False)
+                _losses = g(source_image_batch, source_label_batch, update_gen=update_gen)
                 _auc = trainWorker.metric.result().numpy()
 
                 # update loss
@@ -214,15 +220,15 @@ if __name__ == "__main__":
                 losses[num_losses - 1].update_state(_auc)
 
                 # update tqdm
-                t.postfix[0]["up_g"] = update_gen
-                t.postfix[0]["xe_loss"] = losses[0].result().numpy()
-                t.postfix[0]["gen_loss"] = losses[1].result().numpy()
-                t.postfix[0]["disc_loss"] = losses[2].result().numpy()
-                t.postfix[0]["txe_loss"] = losses[3].result().numpy()
+                t.postfix[0]["_g"] = update_gen
+                t.postfix[0]["xe_l"] = losses[0].result().numpy()
+                t.postfix[0]["g_l"] = losses[1].result().numpy()
+                t.postfix[0]["d_l"] = losses[2].result().numpy()
+                t.postfix[0]["txe_l"] = losses[3].result().numpy()
                 t.postfix[0]["avg_g_m"] = losses[4].result().numpy()
                 t.postfix[0]["avg_g_d"] = losses[5].result().numpy()
-
                 t.postfix[0]["AUC"] = losses[6].result().numpy()
+
                 t.update()
 
                 _callbackList.on_batch_end(i_batch, {"loss": losses[0].result()})  # on batch end

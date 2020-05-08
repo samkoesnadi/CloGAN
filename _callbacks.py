@@ -31,10 +31,7 @@ def get_callbacks(model=None):
     # Define the per-epoch callback.
     lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
 
-    # _callbacks = [clr if USE_CLR else lrate, tensorboard_cbk, model_ckp, early_stopping]  # callbacks list
-    _callbacks = [tensorboard_cbk, model_ckp, early_stopping]  # callbacks list
-
-    if USE_CLR:
-        _callbacks.append(clr)
+    _callbacks = [clr if USE_CLR else lrate, tensorboard_cbk, model_ckp, early_stopping]  # callbacks list
+    # _callbacks = [tensorboard_cbk, model_ckp, early_stopping]  # callbacks list
 
     return _callbacks

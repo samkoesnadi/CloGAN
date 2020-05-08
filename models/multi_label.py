@@ -10,10 +10,6 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
                                                                   input_tensor=input_layer)
     image_feature_vectors = image_section_model.output
 
-    # add dropout if needed
-    if DROPOUT_N != 0.:
-        image_feature_vectors = tf.keras.layers.Dropout(DROPOUT_N)(image_feature_vectors)
-
     # # add regularizer as the experiments show that it results positively when the avg value of image_feature_vectors is small
     # image_feature_vectors = tf.keras.layers.ActivityRegularization(l2=ACTIVIY_REGULARIZER_VAL)(image_feature_vectors)
     image_feature_vectors = tf.identity(image_feature_vectors, name="features")  # to change the name
@@ -47,6 +43,9 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
 
         image_section_layer = model(image_section_layer)
 
+    # add dropout
+    image_section_layer = tf.keras.layers.Dropout(DROPOUT_N)(image_section_layer)
+
     output_layer_dense = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER)
 
     if use_wn:
@@ -58,9 +57,9 @@ def raw_model_binaryXE(use_patient_data=False, use_wn=USE_WN):
         output_layer = tf.keras.layers.Activation("sigmoid", dtype='float32', name='predictions')(output_layer_dense(image_section_layer))
 
     if use_patient_data:
-        return (input_layer, input_semantic), output_layer, feature_vectors
+        return (input_layer, input_semantic), output_layer, image_section_layer
     else:
-        return input_layer, output_layer, feature_vectors
+        return input_layer, output_layer, image_section_layer
 
 
 def model_binaryXE(use_patient_data=False, use_wn=USE_WN):

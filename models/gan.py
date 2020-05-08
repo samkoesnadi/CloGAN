@@ -69,48 +69,42 @@ class GANModel(tf.keras.Model):
 
         self.shared_model = tf.keras.Model(inputs=self.input_layer, outputs=self._add_layer)
 
-        self.source_sep_conv1_act = EndBlock(1536, "block14_sepconv1")
-        self.source_sep_conv2 = tf.keras.layers.SeparableConv2D(2048, kernel_size=3, name="block14_sepconv2",
-                                                                padding="same",
-                                                                kernel_initializer=KERNEL_INITIALIZER, use_bias=False)
+        self.sep_conv1_act = EndBlock(1536, "block14_sepconv1")
+        self.sep_conv2 = tf.keras.layers.SeparableConv2D(2048, kernel_size=3, name="block14_sepconv2",
+                                                         padding="same",
+                                                         kernel_initializer=KERNEL_INITIALIZER, use_bias=False)
 
         # post-process the image features
         self._bn = tf.keras.layers.BatchNormalization(
             name="block14_sepconv2_bn")  # the input can be from source or mixed
-        self._act = tf.keras.layers.Activation(GLOBAL_ACTIVATION, name="block14_sepconv2_act")
+        self._act = tf.keras.layers.Activation("tanh", name="block14_sepconv2_act")
 
         self.image_section_layer = tf.keras.layers.GlobalAveragePooling2D()
 
         self.final_do = tf.keras.layers.Dropout(DROPOUT_N)
 
-        self.dense1 = tf.keras.layers.Dense(1024, use_bias=False)
-        self.bn1 = tf.keras.layers.BatchNormalization()
-        self.act1 = tf.keras.layers.Activation(GLOBAL_ACTIVATION)
-
         self.output_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", kernel_initializer=KERNEL_INITIALIZER)
 
-    def call(self, inputs, training=False, **kwargs):
+    def call_w_features(self, inputs, training=False, **kwargs):
         shared_layer = self.shared_model(inputs, training)
 
-        source_sep_conv1_act = self.source_sep_conv1_act(shared_layer, training)
-        source_sep_conv2 = self.source_sep_conv2(source_sep_conv1_act)
+        sep_conv1_act = self.sep_conv1_act(shared_layer, training)
+        sep_conv2 = self.sep_conv2(sep_conv1_act)
 
         # post-process the image features
-        _bn = self._bn(source_sep_conv2, training)  # the input can be from source or mixed
+        _bn = self._bn(sep_conv2, training)  # the input can be from source or mixed
         _act = self._act(_bn)
 
         image_section_layer = self.image_section_layer(_act)
 
         final_do = self.final_do(image_section_layer, training)
 
-        # first layer of logistic
-        dense1 = self.dense1(final_do)
-        bn1 = self.bn1(dense1)
-        act1 = self.act1(bn1)
+        output_layer = self.output_layer(final_do)
 
-        output_layer = self.output_layer(act1)
+        return output_layer, image_section_layer
 
-        return output_layer
+    def call(self, inputs, training=False, **kwargs):
+        return self.call_w_features(inputs, training, **kwargs)[0]
 
 
 # def model_binaryXE_mid_gan():
