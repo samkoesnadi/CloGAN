@@ -41,11 +41,13 @@ NUM_FEATURES = 2048 + (PAT_DATA_SIZE if USE_PATIENT_DATA else 0)
 # train settings
 # USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = False
-USE_AUGMENTATION = False
+USE_AUGMENTATION = True
 USE_CLR = False
 USE_DROPOUT_PAT_DATA = True
 BUFFER_SIZE = 16000
 BATCH_SIZE = 32  # 32 is optimal
+# BUFFER_SIZE = 1600
+# BATCH_SIZE = 16  # 32 is optimal
 MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
@@ -55,7 +57,7 @@ LAMBDA_ADV = .001  # .001
 LABEL_SMOOTHING = 0.
 
 # eval settings
-EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
+EVAL_CHEXPERT = False  # important if false then, it is trained on chestxray14
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # target dataset FeLoss conf

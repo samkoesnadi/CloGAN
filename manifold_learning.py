@@ -10,7 +10,7 @@ import sklearn.metrics
 from models.gan import *
 
 PRINT_PREDICTION = False
-FEATURE_LAYER_NAME = 2 if USE_DOM_ADAP_NET else 1
+FEATURE_LAYER_NAME = 1
 # FEATURE_LAYER_NAME = "features"
 
 if __name__ == "__main__":
@@ -42,7 +42,8 @@ if __name__ == "__main__":
         predictions = model.predict(input) if not USE_DOM_ADAP_NET else model.call_w_features(input)
 
         label = (predictions[0][:, TRAIN_FIVE_CATS_INDEX] >= 0.3).astype(np.float32) if PRINT_PREDICTION else label.numpy()
-        feature_vectors = tf.reduce_mean(predictions[FEATURE_LAYER_NAME], axis=[1,2]).numpy()
+        # feature_vectors = tf.reduce_mean(predictions[FEATURE_LAYER_NAME], axis=[1,2]).numpy()
+        feature_vectors = predictions[FEATURE_LAYER_NAME].numpy()
 
         # filter zeros
         _i_zeros = np.argwhere(np.array(list(map(_np_to_binary, label))) != 0)[:, 0]

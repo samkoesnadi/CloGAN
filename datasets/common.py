@@ -202,12 +202,13 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                 horizontal_flip=True,
             )
 
-            dataset = dataset.map(lambda x, patient_data, label: (tf.reshape(tf.numpy_function(func=datagen.random_transform, inp=[x], Tout=[tf.float32])[0], (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3)), patient_data, label),
+            dataset = dataset.map(lambda x, patient_data, label: (tf.reshape(tf.numpy_function(func=datagen.random_transform, inp=[x], Tout=[tf.float32])[0], (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)), patient_data, label),
                                   num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
             for f in augmentations:
                 dataset = dataset.map(lambda x, patient_data, label: (
-                    tf.cond(tf.random.uniform([], 0, 1) > 0.75, lambda: f(x), lambda: x), patient_data, label),
+                    tf.cond(tf.random.uniform([], 0, 1) > 0.75, lambda: tf.image.rgb_to_grayscale(f(tf.image.grayscale_to_rgb(x))),
+                            lambda: x), patient_data, label),
                                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if use_feature_loss:
