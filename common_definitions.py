@@ -43,6 +43,7 @@ NUM_FEATURES = 2048 + (PAT_DATA_SIZE if USE_PATIENT_DATA else 0)
 USE_SPARSITY_NORM = False
 USE_AUGMENTATION = False
 USE_CLR = False
+USE_EARLY_STOPPING = False
 USE_DROPOUT_PAT_DATA = True
 BUFFER_SIZE = 16000
 BATCH_SIZE = 32  # 32 is optimal
@@ -90,7 +91,7 @@ CLR_MAXLR = 1e-3
 CLR_PATIENCE = 2
 
 MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
-MODELCKP_BEST_ONLY = True
+MODELCKP_BEST_ONLY = not USE_DOM_ADAP_NET
 
 SAVED_MODEL_PATH = './weights/model.h5'
 
