@@ -44,6 +44,7 @@ USE_SPARSITY_NORM = False
 USE_AUGMENTATION = False
 USE_CLR = False
 USE_EARLY_STOPPING = False
+MODELCKP_BEST_ONLY = not USE_DOM_ADAP_NET
 USE_DROPOUT_PAT_DATA = True
 BUFFER_SIZE = 16000
 BATCH_SIZE = 32  # 32 is optimal
@@ -54,8 +55,12 @@ LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
-LAMBDA_ADV = .001  # .001
-LABEL_SMOOTHING = 0.
+LAMBDA_ADV = 1.  # .001
+USE_SOFT_LABEL_SMOOTHING = True
+USE_NOISY_LABEL = True
+SL_LOWERBOUND = [0.0, 0.2]
+SL_UPPERBOUND = [0.8, 1.0]
+NOISY_LABEL_PERCENTAGE = ceil(10./100. * BATCH_SIZE)
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
@@ -91,7 +96,6 @@ CLR_MAXLR = 1e-3
 CLR_PATIENCE = 2
 
 MODELCKP_PATH = "./checkpoints/model_weights.{epoch:02d}-{val_auc:.2f}.hdf5"  # do not change the format of basename
-MODELCKP_BEST_ONLY = not USE_DOM_ADAP_NET
 
 SAVED_MODEL_PATH = './weights/model.h5'
 

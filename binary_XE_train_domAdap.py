@@ -82,10 +82,6 @@ if __name__ == "__main__":
         "verbose": 1
     }
 
-    # This method returns a helper function to compute cross entropy loss
-    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True, label_smoothing=LABEL_SMOOTHING,
-                                                       reduction=tf.keras.losses.Reduction.NONE)
-
     # save checkpoints
     checkpoint_dir = './checkpoints/disc'
     checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
@@ -103,29 +99,21 @@ if __name__ == "__main__":
             self._target_dataset = iter(_target_dataset)
             self._eval_indices = tf.constant([1, 9, 8, 0, 2])
 
-        def calc_weight_loss(self, name):
-            _weights_1 = model.get_layer(name).weights
-            _weights_1 = tf.reshape(_weights_1[0], [-1])
-            # _weights_1 = tf.squeeze(_weights_1[0])
+            self._keras_eps = tf.keras.backend.epsilon()
 
-            _weights_2 = model.get_layer(name + "_target").weights
-            _weights_2 = tf.reshape(_weights_2[0], [-1])
-            # _weights_2 = tf.squeeze(_weights_2[0])
+        def soft_entropy(self, y_true_range: list, y_pred):
+            y_true = tf.random.uniform(tf.shape(y_pred), minval=y_true_range[0], maxval=y_true_range[1])
 
-            weight_loss = tf.math.abs(tf.keras.losses.cosine_similarity(tf.stop_gradient(_weights_1), _weights_2))
-            # weight_loss = tf.keras.losses.cosine_similarity(_weights_1, _weights_2) + 1.
+            return y_true * tf.math.log(y_pred + self._keras_eps) + (1. - y_true) * tf.math.log(
+                    1. - y_pred + self._keras_eps)
 
-            return weight_loss
-
-        # Notice the use of `tf.function`
+                # Notice the use of `tf.function`
         # This annotation causes the function to be "compiled".
         @tf.function
         def gan_train_step(self, source_image_batch, source_label_batch, update_gen=False):
             target_data = next(self._target_dataset)
             target_image_batch = target_data[0]
             target_label_batch = target_data[1]
-
-            _keras_eps = tf.keras.backend.epsilon()
 
             with tf.GradientTape(persistent=True) as g:
                 source_predictions = model.call_w_features(source_image_batch, training=True)
@@ -144,10 +132,26 @@ if __name__ == "__main__":
                 target_label = tf.stop_gradient(target_predictions[0])
                 source_label = tf.stop_gradient(source_predictions[0])
 
-                gen_loss = source_label * tf.math.log(source_disc_output + _keras_eps) + \
-                            target_label * tf.math.log(1 - target_disc_output + _keras_eps)  # BATCH * NUM_CLASSES
-                disc_loss = target_label * tf.math.log(target_disc_output + _keras_eps) + \
-                            source_label * tf.math.log(1 - source_disc_output + _keras_eps)
+                # noisy label implementation
+                if USE_NOISY_LABEL:  # it is flipping labels around 5% of batch 32
+                    _target_label = tf.concat([source_label[0:NOISY_LABEL_PERCENTAGE], target_label[NOISY_LABEL_PERCENTAGE:]], axis=0)
+                    source_label = tf.concat([target_label[0:NOISY_LABEL_PERCENTAGE], source_label[NOISY_LABEL_PERCENTAGE:]], axis=0)
+                    _target_disc_output = tf.concat([source_disc_output[0:NOISY_LABEL_PERCENTAGE], target_disc_output[NOISY_LABEL_PERCENTAGE:]], axis=0)
+                    source_disc_output = tf.concat([target_disc_output[0:NOISY_LABEL_PERCENTAGE], source_disc_output[NOISY_LABEL_PERCENTAGE:]], axis=0)
+
+                    target_label = _target_label
+                    target_disc_output = _target_disc_output
+
+                if USE_SOFT_LABEL_SMOOTHING:
+                    gen_loss = source_label * self.soft_entropy(SL_UPPERBOUND, source_disc_output) + \
+                                target_label * self.soft_entropy(SL_LOWERBOUND, target_disc_output)  # BATCH * NUM_CLASSES
+                    disc_loss = target_label * self.soft_entropy(SL_UPPERBOUND, target_disc_output) + \
+                                source_label * self.soft_entropy(SL_LOWERBOUND, source_disc_output)
+                else:
+                    gen_loss = source_label * tf.math.log(source_disc_output + self._keras_eps) + \
+                                target_label * tf.math.log(1 - target_disc_output + self._keras_eps)  # BATCH * NUM_CLASSES
+                    disc_loss = target_label * tf.math.log(target_disc_output + self._keras_eps) + \
+                                source_label * tf.math.log(1 - source_disc_output + self._keras_eps)
 
                 # reduce mean gen and disc
                 gen_loss = -tf.reduce_mean(gen_loss)
