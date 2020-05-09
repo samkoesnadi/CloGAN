@@ -120,8 +120,12 @@ if __name__ == "__main__":
                 target_predictions = model.call_w_features(target_image_batch, training=True)
 
                 # input the predicted feature to the discriminator
-                source_disc_output = discriminator(source_predictions, training=True)
-                target_disc_output = discriminator(target_predictions, training=True)
+                # source_disc_output = discriminator(source_predictions, training=True)
+                # target_disc_output = discriminator(target_predictions, training=True)
+
+                # stop gradient for the output label
+                source_disc_output = discriminator([source_predictions[0], tf.stop_gradient(source_predictions[1])], training=True)
+                target_disc_output = discriminator([target_predictions[0], tf.stop_gradient(target_predictions[1])], training=True)
 
                 # calculate xe loss
                 source_xe_loss = _XEloss(source_label_batch, source_predictions[0])

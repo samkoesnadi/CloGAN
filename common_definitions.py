@@ -55,12 +55,12 @@ LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
-LAMBDA_ADV = 1.  # .001
-USE_SOFT_LABEL_SMOOTHING = True
-USE_NOISY_LABEL = True
-SL_LOWERBOUND = [0.0, 0.2]
-SL_UPPERBOUND = [0.8, 1.0]
-NOISY_LABEL_PERCENTAGE = ceil(10./100. * BATCH_SIZE)
+LAMBDA_ADV = .001  # .001
+USE_SOFT_LABEL_SMOOTHING = False
+USE_NOISY_LABEL = False
+SL_LOWERBOUND = [0.0, 0.1]
+SL_UPPERBOUND = [0.9, 1.0]
+NOISY_LABEL_PERCENTAGE = ceil(5./100. * BATCH_SIZE)
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
