@@ -57,7 +57,7 @@ LAMBDA_ADV = .001  # .001
 LABEL_SMOOTHING = 0.
 
 # eval settings
-EVAL_CHEXPERT = False  # important if false then, it is trained on chestxray14
+EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # target dataset FeLoss conf
