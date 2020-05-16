@@ -21,14 +21,6 @@ def allclose(x, y, rtol=1e-5, atol=1e-8):
     return tf.reduce_all(tf.abs(x - y) <= tf.abs(y) * rtol + atol)
 
 
-def calc_indexs(_num_classes, _y_true, _epsilon=tf.keras.backend.epsilon()):
-    # run process of calculating loss
-    keys = tf.eye(_num_classes)
-    _indexs = tf.matmul(_y_true, keys)  # contains all ones, 32 x 14
-
-    return _indexs
-
-
 class BinaryXE_FeLOSS(tf.keras.losses.BinaryCrossentropy):
     def __init__(self, num_classes=NUM_CLASSES, bs=BATCH_SIZE, *args, **kwargs):
         super(BinaryXE_FeLOSS, self).__init__(*args, **kwargs)
@@ -62,7 +54,10 @@ class FeatureStrength:
 
         self._first_iter = True
 
-    # @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_FEATURES], dtype=tf.float32),))
+        # constant
+        self._mask_imean = tf.cast(1. - tf.linalg.band_part(tf.ones((self._num_classes, self._num_classes)), -1, 0), tf.bool)
+
+    @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_FEATURES], dtype=tf.float32),))
     def __call__(self, _features):
         _num_classes = self._num_classes
         _bs = tf.shape(_features)[0]
@@ -71,26 +66,31 @@ class FeatureStrength:
         # mean formula is E[X]
         _features_mean = _indexs @ _features / tf.reduce_sum(_indexs, axis=1, keepdims=True)  # nc, NUM_FEATURES
 
-        # variance formula is E[X^2] - E[X]^2
-        _features_var = (_indexs ** 2 @ _features ** 2) / tf.reduce_sum(_indexs, axis=1, keepdims=True) - \
-                        _features_mean ** 2  # nc, NUM_FEATURES
+        # variance formula is var
+        _features_var = tf.reduce_sum((self._indexs[:_bs][..., None] * _features[:, None, ...] - _features_mean[None, ...])**2, axis=0) / \
+                        tf.reduce_sum(_indexs, axis=1, keepdims=True)  # nc, NUM_FEATURES
 
         if self._first_iter:
             self.features_mean = _features_mean
             self.features_var = _features_var
+            self._first_iter = False
         else:
             self.features_mean = self.features_mean + self._kalman_update_alpha * (
                     _features_mean - self.features_mean)
             self.features_var = self.features_var + self._kalman_update_alpha * (_features_var - self.features_var)
-            self._first_iter = False
 
-        mean_strength = tf.linalg.norm(self.features_mean, ord=2, axis=-1)  # the distance to zero
-        var_strength = tf.linalg.norm(tf.ones((self._num_classes, NUM_FEATURES)) - self.features_var, ord=2,
-                                      axis=-1)  # the distance to one
+        mean_strength = tf.linalg.norm(self.features_mean, ord=2, axis=-1) / 2048**.5  # the distance to zero
+        # var_strength = tf.linalg.norm(tf.math.abs(self.features_mean) - (self.features_var**.5)/(1.960*2), ord=2, axis=-1) / 2048**.5  # the distance to one
+        var_strength = tf.linalg.norm(tf.math.abs(self.features_mean)/1.96*tf.math.sqrt(tf.reduce_sum(_indexs, axis=1, keepdims=True)) - tf.math.sqrt(self.features_var), ord=2, axis=-1) / 2048**.5
         inter_mean_strength = tf.linalg.norm(self.features_mean[None, ...] - self.features_mean[:, None, ...], ord=2,
-                                             axis=-1)  # the distance to each other
+                                             axis=-1) / 2048**.5  # the distance to each other
 
-        return mean_strength, var_strength, tf.reduce_sum(inter_mean_strength, axis=-1)
+        inter_mean_strength = tf.boolean_mask(inter_mean_strength, self._mask_imean)
+        # got the variance as how the algorithm is
+        inter_mean_strength = tf.math.reduce_std(inter_mean_strength)
+
+        return mean_strength, var_strength, inter_mean_strength
+
 
 
 def _half_tanh(x):
