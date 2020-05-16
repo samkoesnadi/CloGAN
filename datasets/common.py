@@ -80,12 +80,16 @@ def calculate_K_SN(train_dataset):
     return sum_norm / (n_mask * BATCH_SIZE)
 
 
-def load_image(img_path):
+def load_image(img_path, use_preprocess_img=False):
     # load image
     img = tf.io.read_file(img_path)
-    img = tf.image.decode_jpeg(img, channels=3)  # output grayscale image
+    img = tf.image.decode_jpeg(img, channels=1)  # output rgb image
     img = tf.image.resize(img, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
-    img /= 255.  # convert the range to 0~1
+
+    if use_preprocess_img:
+        img = tf.keras.applications.xception.preprocess_input(img)
+    else:
+        img /= 255.  # convert the range to 0~1
 
     # sparsity normalization
     img = sparsity_norm(img) if USE_SPARSITY_NORM and K_SN != 1. else img
@@ -164,17 +168,25 @@ def read_TFRecord(filename, num_class=NUM_CLASSES):
 
 def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_data=False, image_only=True, num_class=14,
                  evaluation_mode=False,
+                 eval_five_cats_index=EVAL_FIVE_CATS_INDEX,
                  shuffle=True,
                  batch_size=BATCH_SIZE,
-                 buffer_size=BUFFER_SIZE):
+                 buffer_size=BUFFER_SIZE,
+                 use_feature_loss=False,
+                 secondary_filename=CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH,
+                 secondary_dataset_path=CHESTXRAY_DATASET_PATH,
+                 use_preprocess_img=False,
+                 repeat=False):
     dataset = read_TFRecord(filename, num_class)
-
     dataset = dataset.map(lambda data: (
-        load_image(tf.strings.join([dataset_path, '/', data["image_path"]])), data["patient_data"],
+        load_image(tf.strings.join([dataset_path, '/', data["image_path"]]), use_preprocess_img=use_preprocess_img), data["patient_data"],
         data["label"]), num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
 
+    if repeat:
+        dataset = dataset.repeat()
+
     if evaluation_mode:
-        dataset = dataset.map(lambda image, patient_data, label: (image, patient_data, tf.gather(label, tf.constant(EVAL_FIVE_CATS_INDEX))),
+        dataset = dataset.map(lambda image, patient_data, label: (image, patient_data, tf.gather(label, tf.constant(eval_five_cats_index))),
                               num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
     else:
         if use_augmentation:
@@ -190,17 +202,33 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                 horizontal_flip=True,
             )
 
-            dataset = dataset.map(lambda x, patient_data, label: (tf.reshape(tf.numpy_function(func=datagen.random_transform, inp=[x], Tout=[tf.float32])[0], (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3)), patient_data, label),
+            dataset = dataset.map(lambda x, patient_data, label: (tf.reshape(tf.numpy_function(func=datagen.random_transform, inp=[x], Tout=[tf.float32])[0], (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)), patient_data, label),
                                   num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
             for f in augmentations:
                 dataset = dataset.map(lambda x, patient_data, label: (
-                    tf.cond(tf.random.uniform([], 0, 1) > 0.75, lambda: f(x), lambda: x), patient_data, label),
+                    tf.cond(tf.random.uniform([], 0, 1) > 0.75, lambda: tf.image.rgb_to_grayscale(f(tf.image.grayscale_to_rgb(x))),
+                            lambda: x), patient_data, label),
                                       num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    dataset = dataset.map(
-        lambda x, patient_data, label: (tf.image.rgb_to_grayscale(tf.clip_by_value(x, 0, 1)), patient_data, label),
-        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    if use_feature_loss:
+        td_dataset = read_TFRecord(secondary_filename, num_class).map(lambda data:
+            load_image(tf.strings.join([secondary_dataset_path, '/', data["image_path"]]), use_preprocess_img=use_preprocess_img),
+                                                                      num_parallel_calls=tf.data.experimental.AUTOTUNE)  # load the image
+
+        td_dataset = td_dataset.repeat().shuffle(buffer_size)
+
+        dataset = tf.data.Dataset.zip((dataset, td_dataset))
+
+        dataset = dataset.map(
+            lambda ori_data, td_data: (ori_data[0], ori_data[1],
+                                       (ori_data[2], td_data)),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE)  # source img, pat data, (source label, target img)
+    else:
+        dataset = dataset.map(
+            lambda x, patient_data, label: (x, patient_data,
+                                            label),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if use_patient_data:
         dataset = dataset.map(lambda image, patient_data, label: ({"input_img": image, "input_semantic":(sparsity_norm(patient_data, k_sn=3.7) if USE_SPARSITY_NORM else
@@ -211,7 +239,7 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                               num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
 
     dataset = dataset.shuffle(buffer_size) if shuffle else dataset
-    dataset = dataset.batch(batch_size)  # shuffle and batch with length of padding according to the the batch
+    dataset = dataset.batch(batch_size, drop_remainder=True)  # shuffle and batch with length of padding according to the the batch
 
     # optimizer performance
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
@@ -246,9 +274,14 @@ def read_dataset_multi_class(filename, dataset_path, image_only=True, num_class=
 
 
 if __name__ == "__main__":
-    train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION)
+    train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_preprocess_img=True, use_feature_loss=True, secondary_filename=CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH, secondary_dataset_path=CHESTXRAY_DATASET_PATH)
 
-    for _train in train_dataset.take(32):
-        print(_train[0]["input_img"][0])
-        plt.imshow(np.squeeze(_train[0]["input_img"][0]))
-        plt.show()
+    for _train in train_dataset.take(1):
+        print(_train)
+
+    # train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION)
+    #
+    # for _train in train_dataset.take(32):
+    #     print(_train[0]["input_img"][0])
+    #     plt.imshow(np.squeeze(_train[0]["input_img"][0]))
+    #     plt.show()

@@ -2,10 +2,126 @@ import os
 import glob
 import re
 import numpy as np
-from common_definitions import tf, THRESHOLD_SIGMOID, IMAGE_INPUT_SIZE, K_SN, NUM_CLASSES, CLR_MAXLR, CLR_BASELR, \
-    CLR_PATIENCE
+from common_definitions import *
 from sklearn.utils.class_weight import compute_class_weight
 from tqdm import tqdm
+from utils._auc import AUC
+
+
+def pm_W(x, y=None, from_diff=True):
+    if from_diff:
+        norm = tf.linalg.norm(x[:, None, :] + tf.zeros(tf.shape(x)), ord=1, axis=-1)
+    else:
+        norm = tf.linalg.norm(x[:, None, :] - y, ord=1, axis=-1)
+
+    return norm / NUM_FEATURES
+
+
+def allclose(x, y, rtol=1e-5, atol=1e-8):
+    return tf.reduce_all(tf.abs(x - y) <= tf.abs(y) * rtol + atol)
+
+
+def calc_indexs(_num_classes, _y_true, _epsilon=tf.keras.backend.epsilon()):
+    # run process of calculating loss
+    keys = tf.eye(_num_classes)
+    _indexs = tf.matmul(_y_true, keys)  # contains all ones, 32 x 14
+
+    return _indexs
+
+
+class BinaryXE_FeLOSS(tf.keras.losses.BinaryCrossentropy):
+    def __init__(self, num_classes=NUM_CLASSES, bs=BATCH_SIZE, *args, **kwargs):
+        super(BinaryXE_FeLOSS, self).__init__(*args, **kwargs)
+        self.num_classes = num_classes
+
+        # for SD.
+        self.indexs = tf.Variable(tf.zeros((bs, num_classes)), dtype=tf.float32)
+
+    def call(self, y_true, y_pred):
+        _bs = tf.shape(y_true)[0]
+
+        _indexs, _indexs_ones = calc_indexs(self.num_classes, y_true)
+
+        self.indexs[0:_bs].assign(_indexs)
+        self.indexs_ones[0:_bs].assign(_indexs_ones)
+
+        return super(BinaryXE_FeLOSS, self).call(y_true, y_pred)
+
+
+class FeatureStrength:
+    """
+    Feature strength class for each "data set"
+    """
+
+    def __init__(self, num_classes, _indexs: tf.Variable, _kalman_update_alpha=1.):
+        self._num_classes = num_classes
+        self._indexs = _indexs
+        self.features_mean = tf.random.normal((num_classes, NUM_FEATURES))
+        self.features_var = tf.random.normal((num_classes, NUM_FEATURES))
+        self._kalman_update_alpha = _kalman_update_alpha
+
+        self._first_iter = True
+
+    # @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_FEATURES], dtype=tf.float32),))
+    def __call__(self, _features):
+        _num_classes = self._num_classes
+        _bs = tf.shape(_features)[0]
+        _indexs = tf.transpose(self._indexs[:_bs])  # nc x bs
+
+        # mean formula is E[X]
+        _features_mean = _indexs @ _features / tf.reduce_sum(_indexs, axis=1, keepdims=True)  # nc, NUM_FEATURES
+
+        # variance formula is E[X^2] - E[X]^2
+        _features_var = (_indexs ** 2 @ _features ** 2) / tf.reduce_sum(_indexs, axis=1, keepdims=True) - \
+                        _features_mean ** 2  # nc, NUM_FEATURES
+
+        if self._first_iter:
+            self.features_mean = _features_mean
+            self.features_var = _features_var
+        else:
+            self.features_mean = self.features_mean + self._kalman_update_alpha * (
+                    _features_mean - self.features_mean)
+            self.features_var = self.features_var + self._kalman_update_alpha * (_features_var - self.features_var)
+            self._first_iter = False
+
+        mean_strength = tf.linalg.norm(self.features_mean, ord=2, axis=-1)  # the distance to zero
+        var_strength = tf.linalg.norm(tf.ones((self._num_classes, NUM_FEATURES)) - self.features_var, ord=2,
+                                      axis=-1)  # the distance to one
+        inter_mean_strength = tf.linalg.norm(self.features_mean[None, ...] - self.features_mean[:, None, ...], ord=2,
+                                             axis=-1)  # the distance to each other
+
+        return mean_strength, var_strength, tf.reduce_sum(inter_mean_strength, axis=-1)
+
+
+def _half_tanh(x):
+    return 1 - tf.exp(-x)
+
+
+class FeatureMetric(FeatureStrength):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        _epsilon = tf.keras.backend.epsilon()
+
+        raw_mean_s, raw_var_s, raw_imean_s = super().__call__(*args, **kwargs)
+
+        # # scale
+        # mean_s, var_s = raw_mean_s / NUM_FEATURES ** .5, raw_var_s / NUM_FEATURES ** .5
+
+        # loss
+        raw_loss = raw_mean_s + raw_var_s + raw_imean_s
+
+        return raw_loss, (raw_mean_s, raw_var_s, raw_imean_s)
+
+
+class AUC_five_classes(AUC):
+    def __init__(self, **kwargs):
+        super().__init__(num_classes=5, **kwargs)
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        super().update_state(tf.gather(y_true, TRAIN_FIVE_CATS_INDEX, axis=-1),
+                             tf.gather(y_pred, TRAIN_FIVE_CATS_INDEX, axis=-1), sample_weight)
 
 
 def f1(y_true, y_pred):  # taken from old keras source code

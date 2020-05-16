@@ -10,22 +10,26 @@ import skimage.color
 from utils.cylical_learning_rate import CyclicLR
 from utils._auc import AUC
 
+
 if __name__ == "__main__":
-    model = model_binaryXE(USE_PATIENT_DATA)
+    model = model_binaryXE(USE_PATIENT_DATA, USE_WN)
 
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
-                                 use_patient_data=USE_PATIENT_DATA)
-    val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA)
-    test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA)
+                                 use_patient_data=USE_PATIENT_DATA, use_feature_loss=False)
+    val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
+                               use_feature_loss=False)
+    test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
+                                use_feature_loss=False)
 
     clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
                    step_size=CLR_PATIENCE * ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
 
-    if USE_CLASS_WEIGHT:
-        _loss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
-    else:
-        _loss = tf.keras.losses.BinaryCrossentropy()
+    _losses = []
+
+    # _XEloss = get_weighted_loss(CHEXPERT_CLASS_WEIGHT)
+    _XEloss = tf.keras.losses.BinaryCrossentropy(from_logits=False)
+    _losses.append(_XEloss)
 
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
     _metrics = {"predictions": [f1, AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)]}  # give recall for metric it is more accurate
@@ -50,10 +54,6 @@ if __name__ == "__main__":
         else:
             print("[Load weight] No weight is found")
 
-    model.compile(optimizer=_optimizer,
-                  loss=_loss,
-                  metrics=_metrics)
-
     file_writer_cm = tf.summary.create_file_writer(TENSORBOARD_LOGDIR + '/cm')
 
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
         lr = logs["lr"] if "lr" in logs else LEARNING_RATE
 
-        gradcampps = Xception_gradcampp(model, image, patient_data=patient_data)
+        gradcampps = Xception_gradcampp(model, image, patient_data=patient_data, use_feature_loss=False)
 
         results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
@@ -103,14 +103,19 @@ if __name__ == "__main__":
     cm_callback = tf.keras.callbacks.LambdaCallback(on_epoch_end=log_gradcampp)
     lrate = tf.keras.callbacks.LearningRateScheduler(step_decay)
 
-    _callbacks = [clr if USE_CLR else lrate, model_ckp, tensorboard_cbk, cm_callback, early_stopping]  # callbacks list
+    _callbacks = [clr if USE_CLR else lrate, tensorboard_cbk, model_ckp, early_stopping]  # callbacks list
+
+    model.compile(optimizer=_optimizer,
+                  loss=_losses,
+                  metrics=_metrics
+                  )
 
     # start training
     model.fit(train_dataset,
               epochs=MAX_EPOCHS,
               validation_data=val_dataset,
               initial_epoch=init_epoch,
-              # steps_per_epoch=1,
+              # steps_per_epoch=2,
               callbacks=_callbacks,
               verbose=1)
 
@@ -119,8 +124,3 @@ if __name__ == "__main__":
                              # steps=ceil(CHEXPERT_TEST_N / BATCH_SIZE)
                              )
     print('test loss, test f1, test auc:', results)
-
-    # Save the entire model to a HDF5 file.
-    # The '.h5' extension indicates that the model shuold be saved to HDF5.
-    get_and_mkdir(SAVED_MODEL_PATH)
-    model.save(SAVED_MODEL_PATH)
