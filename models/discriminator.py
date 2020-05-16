@@ -19,6 +19,10 @@ def make_discriminator_model():
 
     model = tf.keras.Sequential()
 
+    model.add(tf.keras.layers.Dense(6144, use_bias=False))
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.Activation(GLOBAL_ACTIVATION))
+
     model.add(tf.keras.layers.Dense(1024, use_bias=False))
     model.add(tf.keras.layers.BatchNormalization())
     model.add(tf.keras.layers.Activation(GLOBAL_ACTIVATION))
