@@ -44,15 +44,17 @@ USE_SPARSITY_NORM = False
 USE_AUGMENTATION = False
 USE_CLR = False
 USE_DROPOUT_PAT_DATA = True
-BUFFER_SIZE = 1600
+BUFFER_SIZE = 16000
 BATCH_SIZE = 32  # 32 is optimal
+# BUFFER_SIZE = 1600
+# BATCH_SIZE = 16  # 32 is optimal
 MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
 LAMBDA_ADV = .001  # .001
-LABEL_SMOOTHING = .1
+LABEL_SMOOTHING = 0.
 
 # eval settings
 EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14

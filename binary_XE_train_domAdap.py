@@ -125,12 +125,8 @@ if __name__ == "__main__":
             target_label_batch = target_data[1]
 
             with tf.GradientTape(persistent=True) as g:
-                source_predictions = model(source_image_batch, training=True)
-                target_predictions = model(target_image_batch, training=True)
-
-                # convert the range to [0..1)
-                source_predictions_minus = source_predictions * 2. - 1.
-                target_predictions_minus = target_predictions * 2. - 1.
+                source_predictions, source_predictions_minus = model.call_w_features(source_image_batch, training=True)
+                target_predictions, target_predictions_minus = model.call_w_features(target_image_batch, training=True)
 
                 # input the predicted feature to the discriminator
                 source_disc_output = discriminator(source_predictions_minus, training=True)
