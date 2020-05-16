@@ -80,8 +80,9 @@ def kl_divergence(p, q):
     return np.sum(np.where(p != 0, p * np.log(p / q), 0))
 
 if __name__ == "__main__":
-    a = cp.random.normal(10, .005, 2048)
+    a = cp.random.normal(1, 2, 2048)
     b = cp.random.normal(0, 1, 2048)
+    b = cp.zeros_like(a)
     print(np.var(a), np.mean(a))
     _foo = np.mean(a)
     a = (a - _foo) / np.std(a, axis=-1, keepdims=True) + _foo
@@ -98,4 +99,4 @@ if __name__ == "__main__":
     print("time spent:", time.time() - start_time)
     print(scipy.stats.wasserstein_distance(a, b))
     print(scipy.spatial.distance.cosine(a, b))
-    print(np.linalg.norm(a-b)**2)
+    print(np.linalg.norm(a-b))

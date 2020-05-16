@@ -176,7 +176,8 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                  secondary_filename=CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH,
                  secondary_dataset_path=CHESTXRAY_DATASET_PATH,
                  use_preprocess_img=False,
-                 repeat=False):
+                 repeat=False,
+                 drop_remainder=True):
     dataset = read_TFRecord(filename, num_class)
     dataset = dataset.map(lambda data: (
         load_image(tf.strings.join([dataset_path, '/', data["image_path"]]), use_preprocess_img=use_preprocess_img), data["patient_data"],
@@ -239,7 +240,7 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                               num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
 
     dataset = dataset.shuffle(buffer_size) if shuffle else dataset
-    dataset = dataset.batch(batch_size, drop_remainder=True)  # shuffle and batch with length of padding according to the the batch
+    dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)  # shuffle and batch with length of padding according to the the batch
 
     # optimizer performance
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)

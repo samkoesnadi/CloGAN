@@ -10,8 +10,6 @@ import datetime
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-import tensorflow.keras
-
 tf.random.set_seed(0)
 np.random.seed(0)
 
