@@ -147,15 +147,15 @@ if __name__ == "__main__":
                     target_disc_output = _target_disc_output
 
                 if USE_SOFT_LABEL_SMOOTHING:
-                    gen_loss = source_label * self.soft_entropy(SL_UPPERBOUND, source_disc_output) + \
-                                target_label * self.soft_entropy(SL_LOWERBOUND, target_disc_output)  # BATCH * NUM_CLASSES
-                    disc_loss = target_label * self.soft_entropy(SL_UPPERBOUND, target_disc_output) + \
-                                source_label * self.soft_entropy(SL_LOWERBOUND, source_disc_output)
+                    gen_loss = self.soft_entropy(SL_UPPERBOUND, source_disc_output) + \
+                                self.soft_entropy(SL_LOWERBOUND, target_disc_output)  # BATCH * NUM_CLASSES
+                    disc_loss = self.soft_entropy(SL_UPPERBOUND, target_disc_output) + \
+                                self.soft_entropy(SL_LOWERBOUND, source_disc_output)
                 else:
-                    gen_loss = source_label * tf.math.log(source_disc_output + self._keras_eps) + \
-                                target_label * tf.math.log(1 - target_disc_output + self._keras_eps)  # BATCH * NUM_CLASSES
-                    disc_loss = target_label * tf.math.log(target_disc_output + self._keras_eps) + \
-                                source_label * tf.math.log(1 - source_disc_output + self._keras_eps)
+                    gen_loss = tf.math.log(source_disc_output + self._keras_eps) + \
+                                tf.math.log(1 - target_disc_output + self._keras_eps)  # BATCH * NUM_CLASSES
+                    disc_loss = tf.math.log(target_disc_output + self._keras_eps) + \
+                                tf.math.log(1 - source_disc_output + self._keras_eps)
 
                 # reduce mean gen and disc
                 gen_loss = -tf.reduce_mean(gen_loss)
