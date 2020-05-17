@@ -192,25 +192,15 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
     else:
         if use_augmentation:
             # Add augmentations
-            augmentations = [color, jpeq_quality, apply_blur, gauss_noise]
-
             datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-                rotation_range=7,
-                width_shift_range=0.1,
-                height_shift_range=0.1,
+                rotation_range=5.,
                 shear_range=5.,
-                zoom_range=0.1,
-                horizontal_flip=True,
+                horizontal_flip=False,
             )
 
             dataset = dataset.map(lambda x, patient_data, label: (tf.reshape(tf.numpy_function(func=datagen.random_transform, inp=[x], Tout=[tf.float32])[0], (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)), patient_data, label),
                                   num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-            for f in augmentations:
-                dataset = dataset.map(lambda x, patient_data, label: (
-                    tf.cond(tf.random.uniform([], 0, 1) > 0.75, lambda: tf.image.rgb_to_grayscale(f(tf.image.grayscale_to_rgb(x))),
-                            lambda: x), patient_data, label),
-                                      num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if use_feature_loss:
         td_dataset = read_TFRecord(secondary_filename, num_class).map(lambda data:
@@ -275,14 +265,14 @@ def read_dataset_multi_class(filename, dataset_path, image_only=True, num_class=
 
 
 if __name__ == "__main__":
-    train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_preprocess_img=True, use_feature_loss=True, secondary_filename=CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH, secondary_dataset_path=CHESTXRAY_DATASET_PATH)
-
-    for _train in train_dataset.take(1):
-        print(_train)
-
-    # train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION)
+    # train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_preprocess_img=True, use_feature_loss=True, secondary_filename=CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH, secondary_dataset_path=CHESTXRAY_DATASET_PATH)
     #
-    # for _train in train_dataset.take(32):
-    #     print(_train[0]["input_img"][0])
-    #     plt.imshow(np.squeeze(_train[0]["input_img"][0]))
-    #     plt.show()
+    # for _train in train_dataset.take(1):
+    #     print(_train)
+
+    train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH, use_augmentation=True)
+
+    for _train in train_dataset.take(32):
+        print(_train[0])
+        plt.imshow(np.squeeze(_train[0][0]), cmap=plt.get_cmap('gray'), vmin=0, vmax=1)
+        plt.show()

@@ -25,6 +25,8 @@ LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.3
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 GLOBAL_ACTIVATION = tf.nn.leaky_relu
+# LAST_ACTIVATION = tf.nn.relu6
+LAST_ACTIVATION = "tanh"
 
 # network model related variable
 USE_SVM = False
