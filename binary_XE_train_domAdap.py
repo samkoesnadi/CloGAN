@@ -32,8 +32,9 @@ if __name__ == "__main__":
     test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
                                 use_feature_loss=False, use_preprocess_img=True)
 
-    train_target_dataset = read_dataset(TARGET_DATASET_FILENAME, TARGET_DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                                use_feature_loss=False, use_preprocess_img=True, repeat=True)
+    train_target_dataset = read_dataset(TARGET_DATASET_FILENAME, TARGET_DATASET_PATH, use_augmentation=USE_AUGMENTATION,
+                            use_patient_data=USE_PATIENT_DATA,
+                            use_feature_loss=False, use_preprocess_img=True, repeat=True)
 
 
     # losses, optimizer, metrics
