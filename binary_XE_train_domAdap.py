@@ -118,66 +118,34 @@ if __name__ == "__main__":
 
                 # Notice the use of `tf.function`
         # This annotation causes the function to be "compiled".
-        @tf.function
-        def gan_train_step(self, source_image_batch, source_label_batch, update_gen=False):
+        # @tf.function
+        def gan_train_step(self, source_image_batch, source_label_batch):
             target_data = next(self._target_dataset)
             target_image_batch = target_data[0]
-            target_label_batch = target_data[1]
 
             with tf.GradientTape(persistent=True) as g:
                 source_predictions = model.call_w_features(source_image_batch, training=True)
                 target_predictions = model.call_w_features(target_image_batch, training=True)
 
-                # input the predicted feature to the discriminator
-                # source_disc_output = discriminator(source_predictions, training=True)
-                # target_disc_output = discriminator(target_predictions, training=True)
-
                 # stop gradient for the output label
-                source_disc_output = discriminator([source_predictions[0], tf.stop_gradient(source_predictions[1])], training=True)
-                target_disc_output = discriminator([target_predictions[0], tf.stop_gradient(target_predictions[1])], training=True)
+                source_disc_output = discriminator(source_predictions[1], training=True)
+                target_disc_output = discriminator(target_predictions[1], training=True)
 
-                # calculate xe loss
-                source_xe_loss = _XEloss(source_label_batch, source_predictions[0])
-                target_xe_loss = _XEloss(tf.gather(target_label_batch, self._eval_indices, axis=-1),
-                                         tf.gather(target_predictions[0], self._eval_indices, axis=-1))
+                # calc gen and disc
 
-                # define the label batch
-                target_label = tf.stop_gradient(target_predictions[0])
-                source_label = tf.stop_gradient(source_predictions[0])
-
-                # noisy label implementation
-                if USE_NOISY_LABEL:  # it is flipping labels around 5% of batch 32
-                    _target_label = tf.concat([source_label[0:NOISY_LABEL_PERCENTAGE], target_label[NOISY_LABEL_PERCENTAGE:]], axis=0)
-                    source_label = tf.concat([target_label[0:NOISY_LABEL_PERCENTAGE], source_label[NOISY_LABEL_PERCENTAGE:]], axis=0)
-                    _target_disc_output = tf.concat([source_disc_output[0:NOISY_LABEL_PERCENTAGE], target_disc_output[NOISY_LABEL_PERCENTAGE:]], axis=0)
-                    source_disc_output = tf.concat([target_disc_output[0:NOISY_LABEL_PERCENTAGE], source_disc_output[NOISY_LABEL_PERCENTAGE:]], axis=0)
-
-                    target_label = _target_label
-                    target_disc_output = _target_disc_output
-
-                if USE_SOFT_LABEL_SMOOTHING:
-                    gen_loss = source_label * self.soft_entropy(SL_UPPERBOUND, source_disc_output) + \
-                                target_label * self.soft_entropy(SL_LOWERBOUND, target_disc_output)  # BATCH * NUM_CLASSES
-                    disc_loss = target_label * self.soft_entropy(SL_UPPERBOUND, target_disc_output) + \
-                                source_label * self.soft_entropy(SL_LOWERBOUND, source_disc_output)
-                else:
-                    gen_loss = source_label * tf.math.log(source_disc_output + self._keras_eps) + \
-                                target_label * tf.math.log(1 - target_disc_output + self._keras_eps)  # BATCH * NUM_CLASSES
-                    disc_loss = target_label * tf.math.log(target_disc_output + self._keras_eps) + \
-                                source_label * tf.math.log(1 - source_disc_output + self._keras_eps)
+                gen_loss = tf.math.log(source_disc_output + self._keras_eps) + \
+                            tf.math.log(1 - target_disc_output + self._keras_eps)  # BATCH * NUM_CLASSES
+                disc_loss = tf.math.log(target_disc_output + self._keras_eps) + \
+                            tf.math.log(1 - source_disc_output + self._keras_eps)
 
                 # reduce mean gen and disc
                 gen_loss = -tf.reduce_mean(gen_loss)
                 disc_loss = -tf.reduce_mean(disc_loss)
 
-                total_loss = source_xe_loss
-                if update_gen: total_loss += self.lambda_adv * gen_loss
-                # total_loss = self.lambda_adv * gen_loss
-
-            gradients_of_model = g.gradient(total_loss, model.trainable_variables)
+            gradients_of_model = g.gradient(gen_loss, model.trainable_variables)
             gradients_of_discriminator = g.gradient(disc_loss, discriminator.trainable_variables)
-            avg_grad_model = (tf.reduce_mean(tf.concat([tf.reshape(tf.math.abs(grad), [-1]) for grad in gradients_of_model], axis=-1)))
-            avg_grad_disc = (tf.reduce_mean(tf.concat([tf.reshape(tf.math.abs(grad), [-1]) for grad in gradients_of_discriminator], axis=-1)))
+            # avg_grad_model = (tf.reduce_mean(tf.concat([tf.reshape(tf.math.abs(grad), [-1]) for grad in gradients_of_model], axis=-1)))
+            # avg_grad_disc = (tf.reduce_mean(tf.concat([tf.reshape(tf.math.abs(grad), [-1]) for grad in gradients_of_discriminator], axis=-1)))
 
             del g  # delete the persistent gradientTape
 
@@ -187,7 +155,7 @@ if __name__ == "__main__":
             # calculate metrics
             self.metric.update_state(source_label_batch, source_predictions[0])
 
-            return source_xe_loss, gen_loss, disc_loss, target_xe_loss, avg_grad_model, avg_grad_disc
+            return 0, gen_loss, disc_loss, 0, 0, 0
 
 
     # initiate worker
@@ -220,16 +188,13 @@ if __name__ == "__main__":
         # reset losses mean
         [loss.reset_states() for loss in losses]
 
-        # update_gen = (epoch % 2) if USE_GAN else False
-        update_gen = USE_GAN
-
         with tqdm(total=math.ceil(TRAIN_N / BATCH_SIZE),
                   postfix=[dict()]) as t:
             for i_batch, (source_image_batch, source_label_batch) in enumerate(train_dataset):
                 _batch_size = tf.shape(source_image_batch)[0].numpy()
                 _callbackList.on_batch_begin(i_batch, {"size": _batch_size})  # on batch begin
 
-                _losses = g(source_image_batch, source_label_batch, update_gen=update_gen)
+                _losses = g(source_image_batch, source_label_batch)
                 _auc = trainWorker.metric.result().numpy()
 
                 # update loss
