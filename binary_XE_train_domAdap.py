@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
                 # Notice the use of `tf.function`
         # This annotation causes the function to be "compiled".
-        # @tf.function
+        @tf.function
         def gan_train_step(self, source_image_batch, source_label_batch):
             target_data = next(self._target_dataset)
             target_image_batch = target_data[0]
