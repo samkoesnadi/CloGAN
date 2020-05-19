@@ -24,7 +24,7 @@ np.random.seed(0)
 IMAGE_INPUT_SIZE = 224  # this is because of Xception
 NUM_CLASSES = 14
 LOAD_WEIGHT_BOOL = True
-DROPOUT_N = 0.5
+DROPOUT_N = 0.3
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 
 # network model related variable
@@ -43,7 +43,7 @@ USE_AUGMENTATION = False
 USE_CLR = False
 USE_GAN = True
 USE_DROPOUT_PAT_DATA = True
-BUFFER_SIZE = 1600
+BUFFER_SIZE = 16000
 BATCH_SIZE = 32  # 32 is optimal
 MAX_EPOCHS = 20
 LEARNING_RATE = 1e-4

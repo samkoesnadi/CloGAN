@@ -36,7 +36,9 @@ if __name__ == "__main__":
 
     # get the data set
     test_dataset = read_dataset(_path, _dataset_path,
-                                use_patient_data=USE_PATIENT_DATA, evaluation_mode=True)
+                                use_patient_data=USE_PATIENT_DATA,
+                                evaluation_mode=True,
+                                use_preprocess_img=True)
 
     results = np.zeros((_test_n, 5), dtype=np.float32)
     test_label_nps = np.zeros((_test_n, 5), dtype=np.float32)
