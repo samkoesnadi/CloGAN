@@ -37,6 +37,7 @@ if __name__ == "__main__":
         CHEXPERT_DATASET_PATH, shuffle=False,
         use_patient_data=USE_PATIENT_DATA,
         evaluation_mode=True,
+        use_preprocess_img=True,
         eval_five_cats_index=[2, 5, 6, 8, 10],
         drop_remainder=False)
 
@@ -45,6 +46,7 @@ if __name__ == "__main__":
         CHESTXRAY_DATASET_PATH, shuffle=False,
         use_patient_data=USE_PATIENT_DATA,
         evaluation_mode=True,
+        use_preprocess_img=True,
         eval_five_cats_index=[1, 9, 8, 0, 2],
         drop_remainder=False)
 
@@ -67,7 +69,7 @@ if __name__ == "__main__":
 
         # calculate index
         _bs = test_label.shape[0]
-        _chexpert_index_sd[:_bs].assign(5, predictions[0].numpy()[..., [2, 5, 6, 8, 10]])
+        _chexpert_index_sd[:_bs].assign(predictions[0].numpy()[..., [2, 5, 6, 8, 10]])
         # _chexpert_index_sd[:_bs].assign(calc_indexs(5, test_label))
 
         # calculate feature strength
@@ -82,7 +84,7 @@ if __name__ == "__main__":
 
         # calculate index
         _bs = test_label.shape[0]
-        _chestxray_index_sd[:_bs].assign(5, predictions[0].numpy()[..., [1, 9, 8, 0, 2]])
+        _chestxray_index_sd[:_bs].assign(predictions[0].numpy()[..., [1, 9, 8, 0, 2]])
         # _chestxray_index_sd[:_bs].assign(calc_indexs(5, test_label))
 
         # calculate feature strength

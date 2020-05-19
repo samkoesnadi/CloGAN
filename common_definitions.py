@@ -63,7 +63,7 @@ SL_UPPERBOUND = [0.9, 1.0]
 NOISY_LABEL_PERCENTAGE = ceil(5./100. * BATCH_SIZE)
 
 # eval settings
-EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
+EVAL_CHEXPERT = False  # important if false then, it is trained on chestxray14
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # target dataset FeLoss conf

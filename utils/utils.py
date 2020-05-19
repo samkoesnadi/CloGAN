@@ -57,7 +57,7 @@ class FeatureStrength:
         # constant
         self._mask_imean = tf.cast(1. - tf.linalg.band_part(tf.ones((self._num_classes, self._num_classes)), -1, 0), tf.bool)
 
-    @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_FEATURES], dtype=tf.float32),))
+    # @tf.function(input_signature=(tf.TensorSpec(shape=[None, NUM_FEATURES], dtype=tf.float32),))
     def __call__(self, _features):
         _num_classes = self._num_classes
         _bs = tf.shape(_features)[0]

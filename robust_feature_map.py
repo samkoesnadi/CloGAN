@@ -11,8 +11,6 @@ import scipy
 from utils.utils import *
 from models.gan import GANModel
 
-PRINT_PREDICTION = False
-
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM()
@@ -37,6 +35,7 @@ if __name__ == "__main__":
         CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, shuffle=False,
         use_patient_data=USE_PATIENT_DATA,
         evaluation_mode=True,
+        use_preprocess_img=True,
         drop_remainder=False)
 
     welford_ = Welford()
@@ -55,7 +54,7 @@ if __name__ == "__main__":
     avg_feature = Welford()
 
     _index_sd = tf.Variable(tf.zeros((TEST_N, 5)))
-    featureStrength = FeatureMetric(num_classes=5, _indexs=_index_sd, _kalman_update_alpha=.5)
+    featureStrength = FeatureMetric(num_classes=5, _indexs=_index_sd, _kalman_update_alpha=1)
 
     for i_d, (test_img, test_label) in tqdm(enumerate(test_dataset)):
         _batch_to_fill = test_img.shape[0] if not USE_PATIENT_DATA else test_img["input_img"].shape[0]
