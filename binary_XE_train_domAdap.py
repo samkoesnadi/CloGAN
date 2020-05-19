@@ -237,7 +237,7 @@ if __name__ == "__main__":
                 losses[num_losses - 1].update_state(_auc)
 
                 # update tqdm
-                t.postfix[0]["_g"] = update_gen
+                # t.postfix[0]["_g"] = update_gen
                 t.postfix[0]["xe_l"] = losses[0].result().numpy()
                 t.postfix[0]["g_l"] = losses[1].result().numpy()
                 t.postfix[0]["d_l"] = losses[2].result().numpy()
