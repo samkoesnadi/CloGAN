@@ -50,12 +50,10 @@ class GANModel(tf.keras.Model):
 
         self.final_do = tf.keras.layers.Dropout(DROPOUT_N)
 
-        # self.output_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", kernel_initializer=KERNEL_INITIALIZER)
-
-        self.output_layer = tf.keras.layers.Dense(NUM_CLASSES, kernel_initializer=KERNEL_INITIALIZER)
+        self.output_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", kernel_initializer=KERNEL_INITIALIZER)
 
         if USE_WN:
-            self.output_layer = WeightNormalization(self.output_layer, data_init=True)
+            self.output_layer = WeightNormalization(self.output_layer, data_init=False)
 
     def call_w_features(self, inputs, training=False, **kwargs):
         shared_layer = self.shared_model(inputs, training)
@@ -73,7 +71,7 @@ class GANModel(tf.keras.Model):
 
         output_layer = self.output_layer(final_do)
 
-        return tf.math.sigmoid(output_layer, name="predictions"), image_section_layer
+        return output_layer, image_section_layer
 
     def call(self, inputs, training=False, **kwargs):
         return self.call_w_features(inputs, training, **kwargs)[0]
