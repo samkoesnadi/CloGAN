@@ -114,10 +114,10 @@ if __name__ == "__main__":
 
                 # calculate weights loss
                 _weights_1 = model.get_layer("predictions_1").weights
-                _weights_1 = tf.concat([tf.reshape(_weights_1[0], [-1]), _weights_1[1]], 0)
+                _weights_1 = tf.reshape(_weights_1[0], [-1])
 
                 _weights_2 = model.get_layer("predictions_2").weights
-                _weights_2 = tf.concat([tf.reshape(_weights_2[0], [-1]), _weights_2[1]], 0)
+                _weights_2 = tf.reshape(_weights_2[0], [-1])
 
                 weight_loss = tf.keras.losses.cosine_similarity(_weights_1,
                                                                 _weights_2) + 1.  # +1 is for a positive loss
@@ -125,12 +125,19 @@ if __name__ == "__main__":
                 # calculate gen loss, disc loss
                 _one_matrix = tf.ones_like(target_output)
                 _zero_matrix = tf.zeros_like(target_output)
-                _adap_weight = 1. - tf.keras.losses.cosine_similarity(target_predictions[2], target_predictions[3])
+                _adap_weight = tf.stop_gradient(1. - tf.keras.losses.cosine_similarity(target_predictions[2], target_predictions[3]))
 
-                gen_loss = (self.lambda_local * _adap_weight + self.eps_adv) * (tf.reduce_mean(cross_entropy(_one_matrix, source_output)) + \
-                           tf.reduce_mean(cross_entropy(_zero_matrix, target_output)))
-                disc_loss = tf.reduce_mean(cross_entropy(_zero_matrix, source_output)) + \
-                            tf.reduce_mean(cross_entropy(_one_matrix, target_output))
+                # reshape adap_weight
+                _adap_weight = tf.reshape(_adap_weight, [-1,1,1])
+
+                gen_loss = cross_entropy(_one_matrix, source_output) + \
+                           (self.lambda_local * _adap_weight + self.eps_adv) * cross_entropy(_zero_matrix, target_output)
+                disc_loss = cross_entropy(_zero_matrix, source_output) + \
+                            cross_entropy(_one_matrix, target_output)
+
+                # mean
+                gen_loss = tf.reduce_mean(gen_loss)
+                disc_loss = tf.reduce_mean(disc_loss)
 
                 total_loss = xe_loss + self.lambda_adv * gen_loss + self.lambda_weight * weight_loss
 
