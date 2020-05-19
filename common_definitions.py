@@ -25,8 +25,6 @@ LOAD_WEIGHT_BOOL = True
 DROPOUT_N = 0.3
 KERNEL_INITIALIZER = tf.keras.initializers.he_normal()
 GLOBAL_ACTIVATION = tf.nn.leaky_relu
-# LAST_ACTIVATION = tf.nn.relu6
-LAST_ACTIVATION = "tanh"
 
 # network model related variable
 USE_SVM = False
@@ -34,6 +32,8 @@ USE_PATIENT_DATA = False
 USE_WN = False
 USE_CONV1D = False
 USE_DOM_ADAP_NET = True
+# LAST_ACTIVATION = tf.nn.relu6
+LAST_ACTIVATION = "tanh"
 TRAIN_CHEXPERT = True  # important if false then, it is trained on chestxray14
 PAT_DATA_SIZE = 4
 NUM_FEATURES = 2048 + (PAT_DATA_SIZE if USE_PATIENT_DATA else 0)

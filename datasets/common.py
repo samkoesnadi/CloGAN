@@ -175,7 +175,7 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
                  use_feature_loss=False,
                  secondary_filename=CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH,
                  secondary_dataset_path=CHESTXRAY_DATASET_PATH,
-                 use_preprocess_img=False,
+                 use_preprocess_img=True,
                  repeat=False,
                  drop_remainder=True):
     dataset = read_TFRecord(filename, num_class)
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     # for _train in train_dataset.take(1):
     #     print(_train)
 
-    train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH, use_augmentation=True)
+    train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH, use_augmentation=True, repeat=True)
 
     for _train in train_dataset.take(32):
         print(_train[0])

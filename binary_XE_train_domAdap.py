@@ -24,18 +24,26 @@ if __name__ == "__main__":
     model.call_w_features(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))
 
     # get the dataset
-    train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
+    train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH,
+                                 use_augmentation=USE_AUGMENTATION,
                                  use_patient_data=USE_PATIENT_DATA,
-                                 use_feature_loss=False, use_preprocess_img=True)
-    val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                               use_feature_loss=False, use_preprocess_img=True)
-    test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                                use_feature_loss=False, use_preprocess_img=True)
+                                 use_feature_loss=False,
+                                 use_preprocess_img=True)
+    val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH,
+                               use_patient_data=USE_PATIENT_DATA,
+                               use_feature_loss=False,
+                               use_preprocess_img=True)
+    test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH,
+                                use_patient_data=USE_PATIENT_DATA,
+                                use_feature_loss=False,
+                                use_preprocess_img=True)
 
-    train_target_dataset = read_dataset(TARGET_DATASET_FILENAME, TARGET_DATASET_PATH, use_augmentation=USE_AUGMENTATION,
-                            use_patient_data=USE_PATIENT_DATA,
-                            use_feature_loss=False, use_preprocess_img=True, repeat=True)
-
+    train_target_dataset = read_dataset(TARGET_DATASET_FILENAME, TARGET_DATASET_PATH,
+                                        use_augmentation=False,
+                                        use_patient_data=USE_PATIENT_DATA,
+                                        use_feature_loss=False,
+                                        use_preprocess_img=True,
+                                        repeat=True)
 
     # losses, optimizer, metrics
     _XEloss = tf.keras.losses.BinaryCrossentropy(from_logits=False, reduction=tf.keras.losses.Reduction.AUTO)
