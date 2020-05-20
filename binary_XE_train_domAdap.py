@@ -23,11 +23,19 @@ if __name__ == "__main__":
     model.call_w_features(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))
 
     # get the dataset
-    train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH,
-                                 use_augmentation=USE_AUGMENTATION,
+    noaug_train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH,
+                                 use_augmentation=False,
                                  use_patient_data=USE_PATIENT_DATA,
                                  use_feature_loss=False,
                                  use_preprocess_img=True)
+
+    if USE_AUGMENTATION:
+        aug_train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH,
+                                           use_augmentation=True,
+                                           use_patient_data=USE_PATIENT_DATA,
+                                           use_feature_loss=False,
+                                           use_preprocess_img=True)
+
     val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH,
                                use_patient_data=USE_PATIENT_DATA,
                                use_feature_loss=False,
@@ -49,7 +57,7 @@ if __name__ == "__main__":
 
     # optimizer
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-    _optimizer_disc = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
+    _optimizer_disc = tf.keras.optimizers.Adam(DISC_LEARNING_RATE, amsgrad=True)
 
     # _metric = AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)  # give recall for metric it is more accurate
     _metric = tf.keras.metrics.AUC(name="auc")  # give recall for metric it is more accurate
@@ -118,7 +126,7 @@ if __name__ == "__main__":
                 # Notice the use of `tf.function`
         # This annotation causes the function to be "compiled".
         @tf.function
-        def gan_train_step(self, source_image_batch, source_label_batch, update_gen=False):
+        def gan_train_step(self, source_image_batch, source_label_batch):
             target_data = next(self._target_dataset)
             target_image_batch = target_data[0]
             target_label_batch = target_data[1]
@@ -169,8 +177,7 @@ if __name__ == "__main__":
                 gen_loss = -tf.reduce_mean(gen_loss)
                 disc_loss = -tf.reduce_mean(disc_loss)
 
-                total_loss = source_xe_loss
-                if update_gen: total_loss += self.lambda_adv * gen_loss
+                total_loss = source_xe_loss + self.lambda_adv * gen_loss
                 # total_loss = self.lambda_adv * gen_loss
 
             gradients_of_model = g.gradient(total_loss, model.trainable_variables)
@@ -190,7 +197,7 @@ if __name__ == "__main__":
 
 
         @tf.function
-        def xe_train_step(self, source_image_batch, source_label_batch, update_gen=False):
+        def xe_train_step(self, source_image_batch, source_label_batch):
             with tf.GradientTape(persistent=True) as g:
                 source_predictions = model(source_image_batch, training=True)
 
@@ -233,7 +240,7 @@ if __name__ == "__main__":
     _global_auc = 0.
     num_losses = 7
     losses = [tf.keras.metrics.Mean() for _ in range(num_losses)]
-    g = trainWorker.gan_train_step if USE_DOM_ADAP_NET else trainWorker.xe_train_step
+
     for epoch in range(init_epoch, fit_params["epochs"]):
         print("Epoch %d/%d" % (epoch + 1, fit_params["epochs"]))
         _callbackList.on_epoch_begin(epoch)  # on epoch start
@@ -241,10 +248,15 @@ if __name__ == "__main__":
         # reset losses mean
         [loss.reset_states() for loss in losses]
 
-        update_gen = USE_DOM_ADAP_NET
+        g = trainWorker.gan_train_step if USE_DOM_ADAP_NET and (epoch % 2) else trainWorker.xe_train_step
 
-        if USE_AUGMENTATION or USE_FF:
-            update_gen = (epoch % 2)
+        if USE_AUGMENTATION:
+            if epoch % 2:
+                train_dataset = noaug_train_dataset
+            else:
+                train_dataset = aug_train_dataset
+        else:
+            train_dataset = noaug_train_dataset
 
         with tqdm(total=math.ceil(TRAIN_N / BATCH_SIZE),
                   postfix=[dict()]) as t:
@@ -252,7 +264,7 @@ if __name__ == "__main__":
                 _batch_size = tf.shape(source_image_batch)[0].numpy()
                 _callbackList.on_batch_begin(i_batch, {"size": _batch_size})  # on batch begin
 
-                _losses = g(source_image_batch, source_label_batch, update_gen=update_gen)
+                _losses = g(source_image_batch, source_label_batch)
                 _auc = trainWorker.metric.result().numpy()
 
                 # update loss
