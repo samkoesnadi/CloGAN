@@ -243,7 +243,7 @@ if __name__ == "__main__":
 
         update_gen = USE_DOM_ADAP_NET
 
-        if USE_AUGMENTATION:
+        if USE_AUGMENTATION or USE_FF:
             update_gen = (epoch % 2)
 
         with tqdm(total=math.ceil(TRAIN_N / BATCH_SIZE),

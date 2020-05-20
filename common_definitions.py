@@ -56,6 +56,7 @@ LEARNING_RATE = 1e-4
 
 # for training domAdap
 LAMBDA_ADV = .001  # .001
+USE_FF = False  # flip flop training
 USE_SOFT_LABEL_SMOOTHING = False
 USE_NOISY_LABEL = False
 SL_LOWERBOUND = [0.0, 0.1]
