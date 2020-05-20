@@ -14,7 +14,6 @@ from models.gan import *
 # global local vars
 TARGET_DATASET_FILENAME = CHESTXRAY_TRAIN_TARGET_TFRECORD_PATH
 TARGET_DATASET_PATH = CHESTXRAY_DATASET_PATH
-USE_GAN = 1
 
 if __name__ == "__main__":
     model = GANModel()
@@ -190,6 +189,28 @@ if __name__ == "__main__":
             return source_xe_loss, gen_loss, disc_loss, target_xe_loss, avg_grad_model, avg_grad_disc
 
 
+        @tf.function
+        def xe_train_step(self, source_image_batch, source_label_batch, update_gen=False):
+            with tf.GradientTape(persistent=True) as g:
+                source_predictions = model(source_image_batch, training=True)
+
+                # calculate xe loss
+                source_xe_loss = _XEloss(source_label_batch, source_predictions)
+
+            gradients_of_model = g.gradient(source_xe_loss, model.trainable_variables)
+            avg_grad_model = (
+                tf.reduce_mean(tf.concat([tf.reshape(tf.math.abs(grad), [-1]) for grad in gradients_of_model], axis=-1)))
+
+            del g  # delete the persistent gradientTape
+
+            _optimizer.apply_gradients(zip(gradients_of_model, model.trainable_variables))
+
+            # calculate metrics
+            self.metric.update_state(source_label_batch, source_predictions[0])
+
+            return source_xe_loss, 0, 0, 0, avg_grad_model, 0
+
+
     # initiate worker
     trainWorker = TrainWorker(_metric, _target_dataset=train_target_dataset, lambda_adv=LAMBDA_ADV)
 
@@ -212,7 +233,7 @@ if __name__ == "__main__":
     _global_auc = 0.
     num_losses = 7
     losses = [tf.keras.metrics.Mean() for _ in range(num_losses)]
-    g = trainWorker.gan_train_step
+    g = trainWorker.gan_train_step if USE_DOM_ADAP_NET else trainWorker.xe_train_step
     for epoch in range(init_epoch, fit_params["epochs"]):
         print("Epoch %d/%d" % (epoch + 1, fit_params["epochs"]))
         _callbackList.on_epoch_begin(epoch)  # on epoch start
@@ -220,8 +241,10 @@ if __name__ == "__main__":
         # reset losses mean
         [loss.reset_states() for loss in losses]
 
-        # update_gen = (epoch % 2) if USE_GAN else False
-        update_gen = USE_GAN
+        update_gen = USE_DOM_ADAP_NET
+
+        if USE_AUGMENTATION:
+            update_gen = (epoch % 2)
 
         with tqdm(total=math.ceil(TRAIN_N / BATCH_SIZE),
                   postfix=[dict()]) as t:

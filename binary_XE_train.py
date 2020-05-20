@@ -16,11 +16,11 @@ if __name__ == "__main__":
 
     # get the dataset
     train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH, use_augmentation=USE_AUGMENTATION,
-                                 use_patient_data=USE_PATIENT_DATA, use_feature_loss=False)
+                                 use_patient_data=USE_PATIENT_DATA, use_feature_loss=False, use_preprocess_img=True)
     val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                               use_feature_loss=False)
+                               use_feature_loss=False, use_preprocess_img=True)
     test_dataset = read_dataset(TEST_TARGET_TFRECORD_PATH, DATASET_PATH, use_patient_data=USE_PATIENT_DATA,
-                                use_feature_loss=False)
+                                use_feature_loss=False, use_preprocess_img=True)
 
     clr = CyclicLR(base_lr=CLR_BASELR, max_lr=CLR_MAXLR,
                    step_size=CLR_PATIENCE * ceil(TRAIN_N / BATCH_SIZE), mode='triangular')
