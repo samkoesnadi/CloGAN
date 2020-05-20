@@ -206,7 +206,7 @@ if __name__ == "__main__":
             _optimizer.apply_gradients(zip(gradients_of_model, model.trainable_variables))
 
             # calculate metrics
-            self.metric.update_state(source_label_batch, source_predictions[0])
+            self.metric.update_state(source_label_batch, source_predictions)
 
             return source_xe_loss, 0, 0, 0, avg_grad_model, 0
 
@@ -293,7 +293,7 @@ if __name__ == "__main__":
         trainWorker.metric.reset_states()
 
         # save checkpoint
-        if USE_GAN:
+        if USE_DOM_ADAP_NET:
             if _auc > _global_auc:
                 _global_auc = _auc
                 checkpoint.save(file_prefix=checkpoint_prefix)
