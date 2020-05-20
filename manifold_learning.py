@@ -32,7 +32,8 @@ if __name__ == "__main__":
 
     test_dataset = read_dataset(
         CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
-        CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, evaluation_mode=True, use_patient_data=USE_PATIENT_DATA)
+        CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, evaluation_mode=True, use_patient_data=USE_PATIENT_DATA, use_preprocess_img=True,
+        use_augmentation=False)
 
     _test_n = CHEXPERT_TEST_N  # TODO
 

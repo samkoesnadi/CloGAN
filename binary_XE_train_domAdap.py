@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # optimizer
     _optimizer = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
-    _optimizer_disc = tf.keras.optimizers.Adam(LEARNING_RATE, amsgrad=True)
+    _optimizer_disc = tf.keras.optimizers.Adam(DISC_LEARNING_RATE, amsgrad=True)
 
     # _metric = AUC(name="auc", multi_label=True, num_classes=NUM_CLASSES)  # give recall for metric it is more accurate
     _metric = tf.keras.metrics.AUC(name="auc")  # give recall for metric it is more accurate
