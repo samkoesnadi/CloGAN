@@ -8,12 +8,28 @@ from utils.visualization import *
 from models.multi_label import *
 import skimage
 import skimage.color
+from models.gan import *
+from models.multi_class import *
 
 
 target_filename = "./sample/00002032_006.png"
-target_filename = "~/Downloads/pneumonia3.jpg"
+target_filename = "~/Downloads/pneumonia.jpg"
 if __name__ == "__main__":
-	model = model_binaryXE(USE_PATIENT_DATA)
+	if USE_SVM:
+		model = model_MC_SVM()
+	elif USE_DOM_ADAP_NET:
+		model = GANModel()
+		# to initiate the graph
+		model.call_w_features(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))
+	else:
+		model = model_binaryXE(use_patient_data=USE_PATIENT_DATA)
+
+	if LOAD_WEIGHT_BOOL:
+		target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
+		if target_model_weight:  # if weight is Found
+			model.load_weights(target_model_weight)
+		else:
+			print("[Load weight] No weight is found")
 
 	if LOAD_WEIGHT_BOOL:
 		target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
@@ -23,25 +39,29 @@ if __name__ == "__main__":
 			print("[Load weight] No weight is found")
 
 	# the data
-	_image = read_image_and_preprocess(target_filename, use_sn=True)
-	image_ori = skimage.color.gray2rgb(read_image_and_preprocess(target_filename, use_sn=False))
+	_image = read_image_and_preprocess(target_filename, use_sn=False, use_preprocess_img=True)
+	image_ori = skimage.color.gray2rgb(read_image_and_preprocess(target_filename, use_sn=False, use_preprocess_img=False))
 
 	image = np.reshape(_image, (-1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1))
 
 	patient_data = np.zeros((1,4))
+	import time
+	start_time = time.time()
 	if USE_PATIENT_DATA:
 		prediction = model.predict({"input_img": image, "input_semantic": patient_data})[0]
 	else:
 		prediction = model.predict(image)[0]
+	print("Time spent", time.time()-start_time)
 
-	gradcampps = Xception_gradcampp(model, image, patient_data=patient_data)
+	# gradcampps = Xception_gradcampp(model, image, patient_data=patient_data)
+	gradcampps = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
 	results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
 	for i_g, gradcampp in enumerate(gradcampps):
-		gradcampp = convert_to_RGB(gradcampp)
+		# gradcampp = convert_to_RGB(gradcampp)
 
-		result = .5 * image_ori + .5 * gradcampp
+		result = 1. * image_ori + .0 * gradcampp
 		results[i_g] = result
 
 

@@ -248,7 +248,8 @@ if __name__ == "__main__":
         # reset losses mean
         [loss.reset_states() for loss in losses]
 
-        g = trainWorker.gan_train_step if USE_DOM_ADAP_NET and (epoch % 2) else trainWorker.xe_train_step
+        # g = trainWorker.gan_train_step if USE_DOM_ADAP_NET and (epoch % 2) else trainWorker.xe_train_step
+        g = trainWorker.gan_train_step
 
         if USE_AUGMENTATION:
             if epoch % 2:

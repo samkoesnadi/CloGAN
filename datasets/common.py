@@ -96,9 +96,16 @@ def load_image(img_path, use_preprocess_img=False):
 
     return img
 
-def read_image_and_preprocess(filename, use_sn=False):
+def read_image_and_preprocess(filename, use_sn=False, use_preprocess_img=True):
     img = skimage.io.imread(filename, True)
     img = skimage.transform.resize(img, (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
+
+    img *= 255.
+
+    if use_preprocess_img:
+        img = tf.keras.applications.xception.preprocess_input(img)
+    else:
+        img /= 255.  # convert the range to 0~1
 
     # sparsity normalization
     img = sparsity_norm(img) if use_sn and K_SN != 1. else img

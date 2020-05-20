@@ -24,11 +24,12 @@ def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=F
 
     for i in tqdm(range(NUM_CLASSES), desc="Generate tensorboard's IMAGE"):
         cls = i
-        _input_model_output = input_model.output[1] if use_feature_loss else input_model.output
+        # _input_model_output = input_model.output[1] if use_feature_loss else input_model.output
+        _input_model_output = input_model.outputs[0]
         y_c = _input_model_output[0, cls*2+1] if use_multi_class else _input_model_output[0, cls]
         y_c = custom_sigmoid(y_c) if use_svm else y_c
 
-        conv_output = input_model.get_layer(layer_name).output
+        conv_output = input_model.call_w_features_act(img)[-1]
 
         grads = K.gradients(y_c, conv_output)[0]
 
