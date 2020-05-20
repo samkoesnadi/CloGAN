@@ -55,7 +55,7 @@ LEARNING_RATE = 1e-4
 # ACTIVIY_REGULARIZER_VAL = 1e-3  # TODO: check this value out
 
 # for training domAdap
-LAMBDA_ADV = .001  # .001
+LAMBDA_ADV = 1.  # .001
 USE_FF = False  # flip flop training
 USE_SOFT_LABEL_SMOOTHING = False
 USE_NOISY_LABEL = False

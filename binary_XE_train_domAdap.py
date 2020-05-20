@@ -169,8 +169,8 @@ if __name__ == "__main__":
                 gen_loss = -tf.reduce_mean(gen_loss)
                 disc_loss = -tf.reduce_mean(disc_loss)
 
-                total_loss = source_xe_loss
-                if update_gen: total_loss += self.lambda_adv * gen_loss
+                total_loss = self.lambda_adv * gen_loss
+                # if update_gen: total_loss += self.lambda_adv * gen_loss
                 # total_loss = self.lambda_adv * gen_loss
 
             gradients_of_model = g.gradient(total_loss, model.trainable_variables)
