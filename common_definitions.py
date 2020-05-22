@@ -42,6 +42,7 @@ NUM_FEATURES = 2048 + (PAT_DATA_SIZE if USE_PATIENT_DATA else 0)
 # USE_CLASS_WEIGHT = False
 USE_SPARSITY_NORM = False
 USE_AUGMENTATION = False
+USE_GAN = True
 USE_CLR = False
 USE_EARLY_STOPPING = False
 MODELCKP_BEST_ONLY = not USE_DOM_ADAP_NET
@@ -64,7 +65,7 @@ SL_UPPERBOUND = [0.9, 1.0]
 NOISY_LABEL_PERCENTAGE = ceil(5./100. * BATCH_SIZE)
 
 # eval settings
-EVAL_CHEXPERT = False  # important if false then, it is trained on chestxray14
+EVAL_CHEXPERT = True  # important if false then, it is trained on chestxray14
 AUC_INTERP_TOGGLE = False  # activate AUC interp
 
 # target dataset FeLoss conf

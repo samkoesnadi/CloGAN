@@ -23,18 +23,11 @@ if __name__ == "__main__":
     model.call_w_features(tf.zeros((1, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)))
 
     # get the dataset
-    noaug_train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH,
-                                 use_augmentation=False,
+    train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH,
+                                 use_augmentation=USE_AUGMENTATION,
                                  use_patient_data=USE_PATIENT_DATA,
                                  use_feature_loss=False,
                                  use_preprocess_img=True)
-
-    if USE_AUGMENTATION:
-        aug_train_dataset = read_dataset(TRAIN_TARGET_TFRECORD_PATH, DATASET_PATH,
-                                           use_augmentation=True,
-                                           use_patient_data=USE_PATIENT_DATA,
-                                           use_feature_loss=False,
-                                           use_preprocess_img=True)
 
     val_dataset = read_dataset(VALID_TARGET_TFRECORD_PATH, DATASET_PATH,
                                use_patient_data=USE_PATIENT_DATA,
@@ -249,15 +242,15 @@ if __name__ == "__main__":
         [loss.reset_states() for loss in losses]
 
         # g = trainWorker.gan_train_step if USE_DOM_ADAP_NET and (epoch % 2) else trainWorker.xe_train_step
-        g = trainWorker.gan_train_step
+        g = trainWorker.gan_train_step if USE_GAN else trainWorker.xe_train_step
 
-        if USE_AUGMENTATION:
-            if epoch % 2:
-                train_dataset = noaug_train_dataset
-            else:
-                train_dataset = aug_train_dataset
-        else:
-            train_dataset = noaug_train_dataset
+        # if USE_AUGMENTATION:
+        #     if epoch % 2:
+        #         train_dataset = noaug_train_dataset
+        #     else:
+        #         train_dataset = aug_train_dataset
+        # else:
+        #     train_dataset = noaug_train_dataset
 
         with tqdm(total=math.ceil(TRAIN_N / BATCH_SIZE),
                   postfix=[dict()]) as t:
