@@ -1,3 +1,7 @@
+"""
+Lists of callbacks for training
+"""
+
 from common_definitions import *
 from datasets.cheXpert_dataset import read_dataset, read_image_and_preprocess
 from utils.utils import *

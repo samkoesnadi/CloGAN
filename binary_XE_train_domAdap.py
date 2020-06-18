@@ -1,6 +1,7 @@
 """
-Train normal model with binary XE as loss function
+Train CloGAN
 """
+
 from tensorflow.python.keras.callbacks import configure_callbacks
 from tqdm import tqdm
 
