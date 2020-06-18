@@ -11,6 +11,7 @@ import scipy
 from utils.utils import *
 from models.gan import GANModel
 
+USE_PREDICTION = False
 FEATURE_LAYER_NAME = 1
 
 if __name__ == "__main__":
@@ -36,19 +37,19 @@ if __name__ == "__main__":
         CHEXPERT_TEST_TARGET_TFRECORD_PATH,
         CHEXPERT_DATASET_PATH, shuffle=False,
         use_patient_data=USE_PATIENT_DATA,
-        evaluation_mode=True,
         use_preprocess_img=True,
         eval_five_cats_index=[2, 5, 6, 8, 10],
-        drop_remainder=False)
+        drop_remainder=False,
+        batch_size=CHEXPERT_TEST_N)
 
     _chestxray_test_dataset = read_dataset(
         CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
         CHESTXRAY_DATASET_PATH, shuffle=False,
         use_patient_data=USE_PATIENT_DATA,
-        evaluation_mode=True,
         use_preprocess_img=True,
         eval_five_cats_index=[1, 9, 8, 0, 2],
-        drop_remainder=False)
+        drop_remainder=False,
+        batch_size=CHEXPERT_TEST_N)
 
     _loss_sum = 0.
     _raw_mean_sum = 0.
@@ -69,7 +70,8 @@ if __name__ == "__main__":
 
         # calculate index
         _bs = test_label.shape[0]
-        _chexpert_index_sd[:_bs].assign(predictions[0].numpy()[..., [2, 5, 6, 8, 10]])
+        _predict_label = predictions[0].numpy() if USE_PREDICTION else test_label.numpy()
+        _chexpert_index_sd[:_bs].assign(_predict_label[..., [2, 5, 6, 8, 10]])
         # _chexpert_index_sd[:_bs].assign(calc_indexs(5, test_label))
 
         # calculate feature strength
@@ -84,20 +86,22 @@ if __name__ == "__main__":
 
         # calculate index
         _bs = test_label.shape[0]
-        _chestxray_index_sd[:_bs].assign(predictions[0].numpy()[..., [1, 9, 8, 0, 2]])
+        _predict_label = predictions[0].numpy() if USE_PREDICTION else test_label.numpy()
+        _chestxray_index_sd[:_bs].assign(_predict_label[..., [1, 9, 8, 0, 2]])
         # _chestxray_index_sd[:_bs].assign(calc_indexs(5, test_label))
 
         # calculate feature strength
         chestxray_featureStrength(predictions[FEATURE_LAYER_NAME])
 
 
-    # l2-dist means inter dataset
-    mean_strength = tf.linalg.norm(chexpert_featureStrength.features_mean - chestxray_featureStrength.features_mean
-                                   , ord=2, axis=-1) / 2048**.5
+    # # l2-dist means inter dataset
+    # mean_strength = tf.linalg.norm(chexpert_featureStrength.features_mean - chestxray_featureStrength.features_mean
+    #                                , ord=2, axis=-1) / 2048**.5
+
+    mean_strength = inter_mean(chexpert_featureStrength.features_mean, chestxray_featureStrength.features_mean, num_classes=5) * 100
 
     # l2-dist vars inter dataset
-    var_strength = tf.linalg.norm(chexpert_featureStrength.features_var - chestxray_featureStrength.features_var,
-                                  ord=2, axis=-1) / 2048**.5
+    var_strength = inter_mean(chexpert_featureStrength.features_var, chestxray_featureStrength.features_var, num_classes=5) * 100
 
     print("Inter-dataset-mean", mean_strength)
     print("avgs Inter-dataset-Mean", tf.reduce_mean(mean_strength))

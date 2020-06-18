@@ -17,7 +17,7 @@ valid_target_tfrecord_path = 'cheXray14_datasets/CheXray14_valid.tfrecord'
 test_target_tfrecord_path = 'cheXray14_datasets/CheXray14_test.tfrecord'
 
 
-def read_CheXray14_csv(csv_path, statistics=True):
+def read_CheXray14_csv(csv_path, statistics=True, opt_paths=None):
 	"""
 
 	:param csv_path:
@@ -44,6 +44,11 @@ def read_CheXray14_csv(csv_path, statistics=True):
 		next(csvreader)  # to remove the header
 		for i_row, row in enumerate(csvreader):
 			image_index = row[0]
+
+			if opt_paths is not None:
+				if not image_index in opt_paths:
+					continue
+
 			label = row[1].split("|")
 			gender = row[5]
 			age = row[4]
@@ -67,7 +72,7 @@ def read_CheXray14_csv(csv_path, statistics=True):
 			temp[list(map(lambda x: labels_key.index(x), label))] = 1.
 			labels[i_row] = temp
 
-	if statistics : statisticsCheXpert(labels, NUM_CLASSES)
+	if statistics : statisticsCheXpert(labels, NUM_CLASSES, CHESTXRAY_LABELS_KEY)
 
 	return (path_key, patient_data_key, labels_key), (paths, patient_datas, labels), total_row
 
@@ -79,7 +84,9 @@ if __name__ == "__main__":
 	with open(test_csv_file, "r") as f:  # test csv
 		test_paths = [line.strip() for line in f]
 
-	(_, _, labels_key), (paths, patient_datas, labels), total_row = read_CheXray14_csv(data_csv_file, statistics=False)
+	(_, _, labels_key), (paths, patient_datas, labels), total_row = read_CheXray14_csv(data_csv_file, statistics=True, opt_paths=test_paths)
+
+	exit()
 
 	dict_patient_datas = dict(zip(paths, patient_datas))
 	dict_labels = dict(zip(paths, labels))

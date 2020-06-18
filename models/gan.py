@@ -55,7 +55,11 @@ class GANModel(tf.keras.Model):
         if USE_WN:
             self.output_layer = WeightNormalization(self.output_layer, data_init=False)
 
+    @tf.function
     def call_w_features(self, inputs, training=False, **kwargs):
+        return self.call_w_everything(inputs, training, **kwargs)[:2]
+
+    def call_w_everything(self, inputs, training=False, **kwargs):
         shared_layer = self.shared_model(inputs, training)
 
         sep_conv1_act = self.sep_conv1_act(shared_layer, training)
@@ -71,8 +75,9 @@ class GANModel(tf.keras.Model):
 
         output_layer = self.output_layer(final_do)
 
-        return output_layer, image_section_layer
+        return output_layer, image_section_layer, _act
 
+    @tf.function
     def call(self, inputs, training=False, **kwargs):
         return self.call_w_features(inputs, training, **kwargs)[0]
 

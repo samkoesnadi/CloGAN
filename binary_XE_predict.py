@@ -13,7 +13,7 @@ from models.multi_class import *
 
 
 target_filename = "./sample/00002032_006.png"
-target_filename = "~/Downloads/pneumonia.jpg"
+target_filename = "/mnt/7E8EEE0F8EEDBFAF/project/bachelorThesis/records/bachelorThesis/predictions/effusion.png"
 if __name__ == "__main__":
 	if USE_SVM:
 		model = model_MC_SVM()
@@ -31,12 +31,7 @@ if __name__ == "__main__":
 		else:
 			print("[Load weight] No weight is found")
 
-	if LOAD_WEIGHT_BOOL:
-		target_model_weight, _ = get_max_acc_weight(MODELCKP_PATH)
-		if target_model_weight:  # if weight is Found
-			model.load_weights(target_model_weight)
-		else:
-			print("[Load weight] No weight is found")
+	model = tf.keras.Model(inputs=model.input_layer, outputs=model.call_w_everything(model.input_layer))
 
 	# the data
 	_image = read_image_and_preprocess(target_filename, use_sn=False, use_preprocess_img=True)
@@ -50,18 +45,18 @@ if __name__ == "__main__":
 	if USE_PATIENT_DATA:
 		prediction = model.predict({"input_img": image, "input_semantic": patient_data})[0]
 	else:
-		prediction = model.predict(image)[0]
+		prediction = np.squeeze(model.predict(image)[0])
 	print("Time spent", time.time()-start_time)
 
-	# gradcampps = Xception_gradcampp(model, image, patient_data=patient_data)
-	gradcampps = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
+	gradcampps = Xception_gradcampp(model, image, patient_data=patient_data)
+	# gradcampps = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
 	results = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 3))
 
 	for i_g, gradcampp in enumerate(gradcampps):
-		# gradcampp = convert_to_RGB(gradcampp)
+		gradcampp = convert_to_RGB(gradcampp)
 
-		result = 1. * image_ori + .0 * gradcampp
+		result = .7 * image_ori + .3 * (gradcampp-gradcampp.min())/(gradcampp.max()-gradcampp.min())
 		results[i_g] = result
 
 

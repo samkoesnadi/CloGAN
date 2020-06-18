@@ -193,20 +193,20 @@ def read_dataset(filename, dataset_path, use_augmentation=False, use_patient_dat
     if repeat:
         dataset = dataset.repeat()
 
+    if use_augmentation:
+        # Add augmentations
+        datagen = tf.keras.preprocessing.image.ImageDataGenerator(
+            rotation_range=5.,
+            shear_range=5.,
+            horizontal_flip=False,
+        )
+
+        dataset = dataset.map(lambda x, patient_data, label: (tf.reshape(tf.numpy_function(func=datagen.random_transform, inp=[x], Tout=[tf.float32])[0], (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)), patient_data, label),
+                              num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
     if evaluation_mode:
         dataset = dataset.map(lambda image, patient_data, label: (image, patient_data, tf.gather(label, tf.constant(eval_five_cats_index))),
                               num_parallel_calls=tf.data.experimental.AUTOTUNE) if image_only else dataset  # if image only throw away patient data
-    else:
-        if use_augmentation:
-            # Add augmentations
-            datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-                rotation_range=5.,
-                shear_range=5.,
-                horizontal_flip=False,
-            )
-
-            dataset = dataset.map(lambda x, patient_data, label: (tf.reshape(tf.numpy_function(func=datagen.random_transform, inp=[x], Tout=[tf.float32])[0], (IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE, 1)), patient_data, label),
-                                  num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
 
     if use_feature_loss:
@@ -279,7 +279,14 @@ if __name__ == "__main__":
 
     train_dataset = read_dataset(CHEXPERT_TRAIN_TARGET_TFRECORD_PATH, CHEXPERT_DATASET_PATH, use_augmentation=True, repeat=True)
 
-    for _train in train_dataset.take(32):
+    test_dataset = read_dataset(
+        CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
+        CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH,
+        evaluation_mode=True,
+        use_augmentation=False,
+        use_patient_data=USE_PATIENT_DATA)
+
+    for _train in test_dataset.take(32):
         print(_train[0])
         plt.imshow(np.squeeze(_train[0][0]), cmap=plt.get_cmap('gray'), vmin=0, vmax=1)
         plt.show()

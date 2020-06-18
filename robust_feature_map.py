@@ -11,6 +11,8 @@ import scipy
 from utils.utils import *
 from models.gan import GANModel
 
+USE_PREDICTION = False
+
 if __name__ == "__main__":
     if USE_SVM:
         model = model_MC_SVM()
@@ -34,15 +36,17 @@ if __name__ == "__main__":
         CHEXPERT_TEST_TARGET_TFRECORD_PATH if EVAL_CHEXPERT else CHESTXRAY_TEST_TARGET_TFRECORD_PATH,
         CHEXPERT_DATASET_PATH if EVAL_CHEXPERT else CHESTXRAY_DATASET_PATH, shuffle=False,
         use_patient_data=USE_PATIENT_DATA,
-        evaluation_mode=True,
+        evaluation_mode=False,
         use_preprocess_img=True,
-        drop_remainder=False)
+        drop_remainder=False,
+        batch_size=CHEXPERT_TEST_N
+    )
 
     welford_ = Welford()
-    _loss_sum = 0.
-    _raw_mean_sum = 0.
-    _raw_imean_sum = 0.
-    _raw_var_sum = 0.
+    _loss_sum = Welford()
+    _raw_mean_sum = Welford()
+    _raw_imean_sum = Welford()
+    _raw_var_sum = Welford()
     _loss_n = 0.
 
     _label_entropy_sum = 0.
@@ -67,7 +71,7 @@ if __name__ == "__main__":
         avg_feature.update(tf.reduce_mean(features_np))
 
         # label's entropy
-        _predict_label = predictions[0].numpy()
+        _predict_label = predictions[0].numpy() if USE_PREDICTION else test_label.numpy()
         _label_entropy = (_predict_label * tf.math.log(_predict_label + tf.keras.backend.epsilon()) +
                           (1 - _predict_label) * tf.math.log(1. - _predict_label + tf.keras.backend.epsilon())) / \
                          tf.math.log(.5)
@@ -82,16 +86,21 @@ if __name__ == "__main__":
         # calculate feature strength
         raw_loss, (raw_mean_s, raw_var_s, raw_imean_s) = featureStrength(features_np)
 
-        _loss_sum += tf.reduce_sum(raw_loss)
-        _raw_mean_sum += tf.reduce_sum(raw_mean_s)
-        _raw_imean_sum += tf.reduce_sum(raw_imean_s)
-        _raw_var_sum += tf.reduce_sum(raw_var_s)
+        _loss_sum(raw_loss)
+        _raw_mean_sum(raw_mean_s.numpy())
+        _raw_imean_sum(raw_imean_s.numpy())
+        _raw_var_sum(raw_var_s.numpy())
+
+        # _loss_sum += tf.reduce_sum(raw_loss)
+        # _raw_mean_sum += tf.reduce_sum(raw_mean_s)
+        # _raw_imean_sum += tf.reduce_sum(raw_imean_s)
+        # _raw_var_sum += tf.reduce_sum(raw_var_s)
         _loss_n += tf.cast(tf.size(raw_loss), dtype=tf.float32)
 
-    print("Loss", (_loss_sum / _loss_n).numpy() * 100)
-    print("RFM", (1 - (_loss_sum / _loss_n).numpy()) * 100)
-    print("Raw mean", (_raw_mean_sum / _loss_n).numpy() * 100)
-    print("Raw imean", (_raw_imean_sum / _loss_n).numpy() * 100)
-    print("Raw var", (_raw_var_sum / _loss_n).numpy() * 100)
+    print("Loss", (_loss_sum.mean) * 100)
+    print("RFM", (1 - (_loss_sum.mean)) * 100)
+    print("Raw mean", (_raw_mean_sum.mean) * 100)
+    print("Raw imean", (_raw_imean_sum.mean) * 100)
+    print("Raw var", (_raw_var_sum.mean) * 100)
     print("Label entropy", (_label_entropy_sum / _label_entropy_n).numpy())
     print("Max val in feature:", maxi, ", mini val in feature:", mini, "avg:", avg_feature)

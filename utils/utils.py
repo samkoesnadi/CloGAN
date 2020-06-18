@@ -21,23 +21,40 @@ def allclose(x, y, rtol=1e-5, atol=1e-8):
     return tf.reduce_all(tf.abs(x - y) <= tf.abs(y) * rtol + atol)
 
 
-class BinaryXE_FeLOSS(tf.keras.losses.BinaryCrossentropy):
-    def __init__(self, num_classes=NUM_CLASSES, bs=BATCH_SIZE, *args, **kwargs):
-        super(BinaryXE_FeLOSS, self).__init__(*args, **kwargs)
-        self.num_classes = num_classes
+def inter_mean(features_mean, features_mean_2=None, distance=True, num_classes=5):
+    _a = tf.tile(features_mean, [num_classes, 1])
+    _b = tf.reshape(tf.transpose(tf.tile(tf.transpose(features_mean if features_mean_2 is None else features_mean_2), [num_classes, 1])), [num_classes**2, 2048])
 
-        # for SD.
-        self.indexs = tf.Variable(tf.zeros((bs, num_classes)), dtype=tf.float32)
+    inter_mean_strength = tf.keras.losses.cosine_similarity(_a, _b)
+    inter_mean_strength = inter_mean_strength + 1. if distance else inter_mean_strength * -1
 
-    def call(self, y_true, y_pred):
-        _bs = tf.shape(y_true)[0]
+    # mask the same classes
+    _mask = tf.reshape(1. - tf.eye(num_classes), [-1])
+    inter_mean_strength = tf.boolean_mask(inter_mean_strength, _mask)
 
-        _indexs, _indexs_ones = calc_indexs(self.num_classes, y_true)
+    # # reduce_mean it to be length of num_classes
+    # inter_mean_strength = tf.linalg.norm(tf.reshape(inter_mean_strength, [num_classes, num_classes-1]), ord=2, axis=1) / (num_classes-1)**.5
 
-        self.indexs[0:_bs].assign(_indexs)
-        self.indexs_ones[0:_bs].assign(_indexs_ones)
+    return inter_mean_strength
 
-        return super(BinaryXE_FeLOSS, self).call(y_true, y_pred)
+
+# class BinaryXE_FeLOSS(tf.keras.losses.BinaryCrossentropy):
+#     def __init__(self, num_classes=NUM_CLASSES, bs=BATCH_SIZE, *args, **kwargs):
+#         super(BinaryXE_FeLOSS, self).__init__(*args, **kwargs)
+#         self.num_classes = num_classes
+#
+#         # for SD.
+#         self.indexs = tf.Variable(tf.zeros((bs, num_classes)), dtype=tf.float32)
+#
+#     def call(self, y_true, y_pred):
+#         _bs = tf.shape(y_true)[0]
+#
+#         _indexs, _indexs_ones = calc_indexs(self.num_classes, y_true)
+#
+#         self.indexs[0:_bs].assign(_indexs)
+#         self.indexs_ones[0:_bs].assign(_indexs_ones)
+#
+#         return super(BinaryXE_FeLOSS, self).call(y_true, y_pred)
 
 
 class FeatureStrength:
@@ -64,11 +81,11 @@ class FeatureStrength:
         _indexs = tf.transpose(self._indexs[:_bs])  # nc x bs
 
         # mean formula is E[X]
-        _features_mean = _indexs @ _features / tf.reduce_sum(_indexs, axis=1, keepdims=True)  # nc, NUM_FEATURES
+        _features_mean = _indexs @ _features / (tf.reduce_sum(_indexs, axis=1, keepdims=True) + tf.keras.backend.epsilon())  # nc, NUM_FEATURES
 
         # variance formula is var
         _features_var = tf.reduce_sum((self._indexs[:_bs][..., None] * _features[:, None, ...] - _features_mean[None, ...])**2, axis=0) / \
-                        tf.reduce_sum(_indexs, axis=1, keepdims=True)  # nc, NUM_FEATURES
+                        (tf.reduce_sum(_indexs, axis=1, keepdims=True) + tf.keras.backend.epsilon())  # nc, NUM_FEATURES
 
         if self._first_iter:
             self.features_mean = _features_mean
@@ -80,14 +97,18 @@ class FeatureStrength:
             self.features_var = self.features_var + self._kalman_update_alpha * (_features_var - self.features_var)
 
         mean_strength = tf.linalg.norm(self.features_mean, ord=2, axis=-1) / 2048**.5  # the distance to zero
+        # mean_strength = tf.linalg.norm(_features, ord=2, axis=-1) / 2048**.5  # the distance to zero
         # var_strength = tf.linalg.norm(tf.math.abs(self.features_mean) - (self.features_var**.5)/(1.960*2), ord=2, axis=-1) / 2048**.5  # the distance to one
-        var_strength = tf.linalg.norm(tf.math.abs(self.features_mean)/1.96*tf.math.sqrt(tf.reduce_sum(_indexs, axis=1, keepdims=True)) - tf.math.sqrt(self.features_var), ord=2, axis=-1) / 2048**.5
-        inter_mean_strength = tf.linalg.norm(self.features_mean[None, ...] - self.features_mean[:, None, ...], ord=2,
-                                             axis=-1) / 2048**.5  # the distance to each other
+        var_strength = tf.linalg.norm(tf.reduce_max(tf.math.abs(self.features_mean), axis=0)/1.960*tf.math.sqrt(tf.reduce_sum(_indexs, axis=1, keepdims=True)) - tf.math.sqrt(self.features_var), ord=2, axis=-1) / 2048**.5
+        # var_strength = tf.linalg.norm(1 - tf.math.sqrt(self.features_var), ord=2, axis=-1) / 2048**.5
 
-        inter_mean_strength = tf.boolean_mask(inter_mean_strength, self._mask_imean)
-        # got the variance as how the algorithm is
-        inter_mean_strength = tf.math.reduce_std(inter_mean_strength)
+        # inter_mean_strength = tf.linalg.norm(self.features_mean[None, ...] - self.features_mean[:, None, ...], ord=2,
+        #                                      axis=-1) / 2048**.5  # the distance to each other
+        # inter_mean_strength = tf.boolean_mask(inter_mean_strength, self._mask_imean)
+        # # got the variance as how the algorithm is
+        # inter_mean_strength = tf.math.reduce_std(inter_mean_strength) * 2
+
+        inter_mean_strength = inter_mean(self.features_mean, distance=True)
 
         return mean_strength, var_strength, inter_mean_strength
 
@@ -109,8 +130,14 @@ class FeatureMetric(FeatureStrength):
         # # scale
         # mean_s, var_s = raw_mean_s / NUM_FEATURES ** .5, raw_var_s / NUM_FEATURES ** .5
 
+        # raw_mean_s = tf.reduce_max(raw_mean_s)
+        # # raw_mean_s = tf.reduce_mean(raw_mean_s)
+        # raw_var_s = tf.reduce_max(raw_var_s)
+        # raw_imean_s = tf.reduce_max(raw_imean_s)
+
         # loss
-        raw_loss = raw_mean_s + raw_var_s + raw_imean_s
+        # raw_loss = raw_mean_s + raw_var_s + raw_imean_s
+        raw_loss = 0.
 
         return raw_loss, (raw_mean_s, raw_var_s, raw_imean_s)
 

@@ -26,10 +26,9 @@ def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=F
         cls = i
         # _input_model_output = input_model.output[1] if use_feature_loss else input_model.output
         _input_model_output = input_model.outputs[0]
-        y_c = _input_model_output[0, cls*2+1] if use_multi_class else _input_model_output[0, cls]
-        y_c = custom_sigmoid(y_c) if use_svm else y_c
+        y_c = _input_model_output[0, cls]
 
-        conv_output = input_model.call_w_features_act(img)[-1]
+        conv_output = input_model.outputs[2]
 
         grads = K.gradients(y_c, conv_output)[0]
 
@@ -39,6 +38,12 @@ def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=F
 
         gradient_function = K.function([input_model.input] if not USE_PATIENT_DATA else input_model.inputs, [y_c,first,second,third, conv_output, grads])
         y_c, conv_first_grad, conv_second_grad,conv_third_grad, conv_output, grads_val = gradient_function([img] if not USE_PATIENT_DATA else {"input_img": img, "input_semantic":patient_data})
+
+        # # in case of tanh
+        # conv_first_grad = np.abs(conv_first_grad)
+        # conv_second_grad = np.abs(conv_second_grad)
+        # conv_third_grad = np.abs(conv_third_grad)
+
         global_sum = np.sum(conv_output[0].reshape((-1,conv_first_grad[0].shape[2])), axis=0)
 
         alpha_num = conv_second_grad[0]
@@ -47,6 +52,7 @@ def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=F
         alphas = alpha_num/alpha_denom
 
         weights = np.maximum(conv_first_grad[0], 0.0)
+        # weights = np.tanh(conv_first_grad[0])
 
         alpha_normalization_constant = np.sum(np.sum(alphas, axis=0),axis=0)
 
@@ -58,6 +64,10 @@ def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=F
 
         # Passing through ReLU
         cam = np.maximum(grad_CAM_map, 0)
+
+        # # Passing through tanh
+        # cam = np.tanh(grad_CAM_map)
+
         cam = zoom(cam, IMAGE_INPUT_SIZE / cam.shape[0])
         cam = cam / np.max(cam)  # scale 0 to 1.0
         # cam = resize(cam, (224,224))
