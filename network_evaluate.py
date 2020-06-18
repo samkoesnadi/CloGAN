@@ -1,6 +1,7 @@
 """
-Train normal model with binary XE as loss function
+Evaluate model's performance by the accuracy (AUC, F1)
 """
+
 from datasets.cheXpert_dataset import read_dataset
 from models.multi_class import *
 from models.multi_label import *

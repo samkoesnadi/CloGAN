@@ -1,6 +1,7 @@
 """
-Train normal model with binary XE as loss function
+Predict symptoms in chest X-ray image with given model's architecture
 """
+
 from common_definitions import *
 from datasets.cheXpert_dataset import *
 from utils.utils import *

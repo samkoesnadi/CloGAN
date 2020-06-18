@@ -1,3 +1,7 @@
+"""
+t-SNE Manifold learning of the feature mapping
+"""
+
 from sklearn.manifold import Isomap, TSNE
 from common_definitions import *
 import time
