@@ -22,7 +22,7 @@ def convert_to_RGB(dz):
 def grad_cam_plus(input_model, img, layer_name, use_svm=False, use_multi_class=False, patient_data=None, use_feature_loss=False):
     cams = np.zeros((NUM_CLASSES, IMAGE_INPUT_SIZE, IMAGE_INPUT_SIZE))
 
-    for i in tqdm(range(NUM_CLASSES), desc="Generate tensorboard's IMAGE"):
+    for i in tqdm(range(NUM_CLASSES), desc="Generating saliency map (GradCAM ++)"):
         cls = i
         # _input_model_output = input_model.output[1] if use_feature_loss else input_model.output
         _input_model_output = input_model.outputs[0]

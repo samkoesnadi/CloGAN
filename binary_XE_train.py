@@ -1,5 +1,5 @@
 """
-Train normal model with binary XE as loss function
+Train baseline normal model with binary XE as loss function
 """
 from common_definitions import *
 from datasets.cheXpert_dataset import read_dataset, read_image_and_preprocess
