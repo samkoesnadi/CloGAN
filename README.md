@@ -1,6 +1,6 @@
 # ANALYSIS OF DEEP DOMAIN SHIFT FOR MEDICAL CLASSIFICATION TASKS ON CHEST X-RAY DATASETS
 
-The project directory consists of files, programmed in Python. The description of each file is commented in the beginning of the corresponding file.
+The project directory consists of files, programmed in Python. The description of each file is commented in the beginning of the corresponding file. This project is based on my
 
 >To have the pre-trained model, download https://github.com/samuelmat19/CloGAN/releases/download/pretrained-model/model.hdf5 and copy it to "resources" directory.
 
