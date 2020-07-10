@@ -2,7 +2,7 @@
 
 The project directory consists of files, programmed in Python. The description of each file is commented in the beginning of the corresponding file.
 
->To have the pre-trained model, download https://github.com/samuelmat19/KusdaNet/releases/download/0.1.1/model.hdf5 and copy it to "resources" directory.
+>To have the pre-trained model, download https://github.com/samuelmat19/CloGAN/releases/download/pretrained-model/model.hdf5 and copy it to "resources" directory.
 
 ## Tutorial
 
