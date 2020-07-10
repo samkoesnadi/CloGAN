@@ -1,2 +1,0 @@
-00000032_006.png	Atelectasis|Effusion|Infiltration	6	32	55	F	AP	2500	2048	0.168	0.168
-
