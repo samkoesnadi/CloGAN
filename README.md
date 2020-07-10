@@ -2,6 +2,8 @@
 
 The project directory consists of files, programmed in Python. The description of each file is commented in the beginning of the corresponding file.
 
+>To have the pre-trained model, download https://github.com/samuelmat19/KusdaNet/releases/download/0.1.1/model.hdf5 and copy it to "resources" directory.
+
 ## Tutorial
 
 ### Predict abnormalities/symptoms in chest X-ray image with Xception network, trained on classification loss and CloGAN
