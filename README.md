@@ -1,5 +1,10 @@
 # Xception Network trained with CloGAN for unsupervised domain adaptation
 
+![python 3](https://img.shields.io/badge/python-3-blue.svg)
+![tensorflow 2](https://img.shields.io/badge/tensorflow-2-orange.svg)
+
+![](assets/CloGAN.png)
+
 The project directory consists of files, programmed in Python. The description of each file is commented in the beginning of the corresponding file. 
 
 It s based on my thesis that is uploaded to [Academia.edu](
